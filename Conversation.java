@@ -2,13 +2,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Date;
 
 /**
  * Conversation object class
  */
 
-public class Conversation {
+public class Conversation implements Comparable<Conversation> {
     private final String chat; //Name of chat (receiver or group)
+    private long lastModified; //Time in milliseconds since epoch of last modification
     private final ArrayList<Message> messages; //ArrayList of messages
 
     /**
@@ -18,6 +20,7 @@ public class Conversation {
      */
     public Conversation(String chat) {
         this.chat = chat;
+        this.lastModified = new Date().getTime();
         this.messages = new ArrayList<Message>();
     }
 
@@ -28,6 +31,22 @@ public class Conversation {
      */
     public String getChat() {
         return chat;
+    }
+
+    /**
+     * Returns the lastModified of this Conversation
+     *
+     * @return Time in milliseconds since epoch of last modification
+     */
+    public long getLastModified() {
+        return lastModified;
+    }
+
+    /**
+     * Sets the lastModified of this Conversation to the current time
+     */
+    public void setLastModified() {
+        lastModified = new Date().getTime();
     }
 
     /**
@@ -46,6 +65,7 @@ public class Conversation {
      */
     public void addMessage(Message message) {
         messages.add(message);
+        setLastModified();
     }
 
     /**
@@ -56,6 +76,8 @@ public class Conversation {
      */
     public void editMessage(Message message, String content) {
         messages.get(messages.indexOf(message)).edit(content);
+
+        setLastModified();
     }
 
     /**
@@ -65,6 +87,43 @@ public class Conversation {
      */
     public void deleteMessage(Message message) {
         messages.remove(message);
+        setLastModified();
+    }
+
+    /**
+     * Creates list of string representation messages of the last 10 messages from this conversation
+     *
+     * @return List of string representation of messages
+     */
+    public String[] getVisibleMessages() {
+        int size = messages.size();
+        int index;
+
+        if (size >= 10) {
+            index = size - 10;
+        } else {
+            index = 0;
+        }
+
+        String[] visibleMessages = new String[size - index];
+
+        for (int i = index; i < size; i++) {
+            visibleMessages[i - index] = messages.get(i).toString();
+        }
+
+        return visibleMessages;
+    }
+
+    /**
+     * Compares two messages for use in the Collections.sort() method
+     *
+     * @param conversation Conversation to compare
+     * @return -1 if conversation's lastModified is smaller, 1 if it is larger, and 0 if it is equal
+     */
+    @Override
+    public int compareTo(Conversation conversation) {
+        return Long.compare(this.getLastModified(), conversation.getLastModified());
+
     }
 
     /**

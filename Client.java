@@ -7,7 +7,12 @@ import java.util.Scanner;
 
 /**
  * Client class that contains GUI, data of open conversation, and sends messages to server
+ * <p>
+ * List of commands and formatting:
+ * Send gui data:  gd Chats<[chat1, chat2...]> Messages<[Message<..1>, Message<..2>...]>
+ * Send error:     er message
  */
+
 public class Client {
     public static void main(String[] args) throws IOException {
 
@@ -17,21 +22,18 @@ public class Client {
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              PrintWriter writer = new PrintWriter(socket.getOutputStream())) {
 
-            System.out.println("Who is the sender?");
-            String sender = scan.nextLine();
-            System.out.println("Who is the receiver?");
-            String receiver = scan.nextLine();
-            System.out.println("What is the message?");
-            String content = scan.nextLine();
+            while (true) {
 
-            Message message = new Message(sender, receiver, content);
+                System.out.println("Command to send to server:");
+                String command = scan.nextLine();
 
-            writer.write(message.toString());
-            writer.println();
-            writer.flush(); //Ensure data is sent to the server
+                writer.write(command);
+                writer.println();
+                writer.flush(); //Ensure data is sent to the server
 
-            String s1 = reader.readLine();
-            System.out.printf("Received from server:\n%s\n", s1);
+                String guiData = reader.readLine();
+                System.out.println(guiData);
+            }
         }
     }
 }

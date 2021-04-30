@@ -44,6 +44,8 @@ public class Server {
 
             System.out.println("Connected.");
 
+            initialize();
+
             while (true) {
 
                 String command = reader.readLine();
@@ -174,12 +176,24 @@ public class Server {
                         //New user: nu <username> <password>
                         //Create new user object and keep it in users array
 
-                        //TODO: check that username is not already taken, make sure it doesn't have [] characters
-
                         fields = command.split(" ");
-                        users.add(new User(fields[0], fields[1]));
 
-                        sendConfirmation(writer);
+                        if (fields.length < 2) {
+                            sendError("Please enter valid username or password.", writer);
+                        } else if (findUser(fields[0], users) != -1) {
+                            sendError("Username taken.", writer);
+                        } else {
+                            users.add(new User(fields[0], fields[1]));
+
+                            /*
+                            for (int i = 0; i < users.size(); i++) {
+                                System.out.println(users.get(i));
+                            }
+                            */
+                            //TODO: store the new user data to user data file
+
+                            sendConfirmation(writer);
+                        }
 
                         break;
 
@@ -209,6 +223,14 @@ public class Server {
         }
 
     }
+
+    /**
+     * Initialize user data files
+     */
+    public static void initialize() {
+        //TODO: import user data file to the users array list
+    }
+
 
     /**
      * Finds the index of the user with the specified username
@@ -272,5 +294,7 @@ public class Server {
         writer.println();
         writer.flush();
     }
+
 }
+
 

@@ -50,6 +50,8 @@ public class Server {
                 String direction = command.substring(0, 2);
                 command = command.substring(3);
 
+                //TODO: Allow users to edit accounts
+
                 //TODO: currently only sends data back to sender, learn how to connect to multiple clients
 
                 switch (direction) {
@@ -181,8 +183,8 @@ public class Server {
                         if (findUser(fields[0], users) != -1) {
                             sendError("Error: User is already logged in.", writer);
                         } else if (logins.contains(command)) {
-                            users.add(loadUser(fields[0], fields[1]));
-                            sendConfirmation(writer);
+                           users.add(loadUser(fields[0], fields[1]));
+                           sendConfirmation(writer);
 
                             for (int i = 0; i < users.size(); i++) {
                                 System.out.println(users.get(i).getUsername());
@@ -219,6 +221,7 @@ public class Server {
                         //Rewrite all User data to file, delete User from users
 
                         closeUser(users.get(findUser(command, users)));
+                        users.remove(findUser(command, users));
                         sendConfirmation(writer);
 
                         break;
@@ -231,7 +234,8 @@ public class Server {
                 }
             }
 
-        } catch (IOException e) {
+        } catch (Exception e) {
+            System.out.println("Error in Server Class");
             e.printStackTrace();
         }
     }
@@ -317,7 +321,9 @@ public class Server {
             }
         }
 
-        user.setOpenChat(user.getChats()[0]);
+        if (user.getChats().length > 0) {
+            user.setOpenChat(user.getChats()[0]);
+        }
 
         return user;
     }

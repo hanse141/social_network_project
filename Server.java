@@ -1,5 +1,3 @@
-import org.jetbrains.annotations.NotNull;
-
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -14,7 +12,7 @@ import java.util.Arrays;
  * Edit message:           em <content> Message<>
  * Delete message:         dm Message<>
  * Load conversation:      lc <chat> <username>
- * New conversation:       nc <chat> <username>
+ * New conversation:       nc <chat> <...> <username>
  * Delete conversation:    dc <chat> <username>
  * Login user:             lu <username> <password>
  * New user:               nu <username> <password>
@@ -124,7 +122,7 @@ public class Server {
                         break;
 
                     case "nc":
-                        //New conversation: nc <chat> <username>
+                        //New conversation: nc <chat> <...> <username>
                         //Find user by username, add Conversation to conversations, set openChat to conversation
                         //If user doesn't exist, error code and message is sent to client
 
@@ -175,12 +173,21 @@ public class Server {
                         //retrieve conversations from file, send list of chats to client, set openChat to most recent,
                         //send list of messages from openChat to client
 
+                        //TODO: Fix NullPointerException when dedicated user folder is not created before calling lu
+
                         fields = command.split(" ");
 
                         //Check that login information is correct
-                        if (logins.contains(command)) {
+                        if (findUser(fields[0], users) != -1) {
+                            sendError("Error: User is already logged in.", writer);
+                        } else if (logins.contains(command)) {
                             users.add(loadUser(fields[0], fields[1]));
                             sendConfirmation(writer);
+
+                            for (int i = 0; i < users.size(); i++) {
+                                System.out.println(users.get(i).getUsername());
+                            }
+
 
                         } else {
                             sendError("Error: Username/Password is not correct.", writer);
@@ -195,11 +202,12 @@ public class Server {
                         fields = command.split(" ");
 
                         //Check that username is available
-                        if (logins.contains(command)) {
+                        if (checkLogins(fields[0], logins)) {
                             sendError("Error: Username taken.", writer);
                         } else {
                             users.add(new User(fields[0], fields[1]));
                             addLogin(fields[0], fields[1]);
+                            logins.add(fields[0] + " " + fields[1]);
 
                             sendConfirmation(writer);
                         }
@@ -234,7 +242,7 @@ public class Server {
      *
      * @param user Complete User object
      */
-    public static void closeUser(@NotNull User user) {
+    public static void closeUser(User user) {
 
         ArrayList<Conversation> conversations = user.getConversations();
 
@@ -286,7 +294,7 @@ public class Server {
         for (File conversation : conversations) {
 
             try (FileReader fr = new FileReader(conversation);
-                 BufferedReader bfr = new BufferedReader(fr)) {
+                BufferedReader bfr = new BufferedReader(fr)) {
 
                 String chat = conversation.getName();
                 chat = chat.substring(0, chat.length() - 4);
@@ -354,6 +362,27 @@ public class Server {
             e.printStackTrace();
         }
     }
+
+
+    /**
+     * Finds the logins contains the specified username
+     *
+     * @param username Username of user
+     * @param logins   ArrayList of logins (from main)
+     * @return The index of the user in logins
+     */
+    public static boolean checkLogins(String username, ArrayList<String> logins) {
+        boolean bool = false;
+
+        for (int i = 0; i < logins.size(); i++) {
+            if (logins.get(i).contains(username)) {
+                bool = true;
+            }
+        }
+
+        return bool;
+    }
+
 
     /**
      * Finds the index of the user with the specified username

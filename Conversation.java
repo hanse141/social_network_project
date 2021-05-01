@@ -25,6 +25,19 @@ public class Conversation implements Comparable<Conversation> {
     }
 
     /**
+     * Constructs a newly allocated Conversation object and instantiates its fields to the specified parameters
+     *
+     * @param chat         Name of chat
+     * @param lastModified Time in milliseconds since epoch of last modification
+     * @param messages     ArrayList of messages
+     */
+    public Conversation(String chat, long lastModified, ArrayList<Message> messages) {
+        this.chat = chat;
+        this.lastModified = lastModified;
+        this.messages = messages;
+    }
+
+    /**
      * Returns the chat of this Conversation
      *
      * @return Name of chat
@@ -123,7 +136,6 @@ public class Conversation implements Comparable<Conversation> {
     @Override
     public int compareTo(Conversation conversation) {
         return Long.compare(this.getLastModified(), conversation.getLastModified());
-
     }
 
     /**
@@ -135,13 +147,11 @@ public class Conversation implements Comparable<Conversation> {
         try (FileOutputStream fos = new FileOutputStream(filename, false);
              PrintWriter pw = new PrintWriter(fos)) {
 
-            pw.println("Conversation<chat=" + chat + ", messages=");
+            pw.println(chat);
 
             for (Message message : messages) {
-                pw.println(message.toString() + ',');
+                pw.println(message.getTimeStamp() + ' ' + message.getSender() + ": " + message.getContent());
             }
-
-            pw.println('>');
 
         } catch (IOException e) {
             e.printStackTrace();

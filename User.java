@@ -132,15 +132,4 @@ public class User {
 
         return chats;
     }
-
-    /**
-     * Creates the string representation of the user object
-     *
-     * @return String of user
-     */
-    @Override
-    public String toString() {
-        return "User<name='" + username + "', password='" + password + "'>";
-    }
-
 }

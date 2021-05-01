@@ -1,7 +1,6 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import org.jetbrains.annotations.NotNull;
+
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -17,9 +16,9 @@ import java.util.Arrays;
  * Load conversation:      lc <chat> <username>
  * New conversation:       nc <chat> <username>
  * Delete conversation:    dc <chat> <username>
+ * Login user:             lu <username> <password>
  * New user:               nu <username> <password>
- * Load user:              lu <username> (incomplete)
- * Close user:             cu <username> (incomplete)
+ * Close user:             cu <username>
  * Export conversation:    xc <chat> <username> <filename> (incomplete)
  * <p>
  * Message.toString() ->   Message<sender=s, receiver=r, timeStamp=yyyy/MM/dd HH:mm:ss, content=c>
@@ -32,6 +31,7 @@ public class Server {
         int receiverIndex; //Index of receiver in users
         Message message; //Message object specific to case
 
+        ArrayList<String> logins = importLogins();
         ArrayList<User> users = new ArrayList<>();
 
         System.out.println("Waiting for client...");
@@ -44,8 +44,6 @@ public class Server {
 
             System.out.println("Connected.");
 
-            initialize();
-
             while (true) {
 
                 String command = reader.readLine();
@@ -53,7 +51,6 @@ public class Server {
 
                 String direction = command.substring(0, 2);
                 command = command.substring(3);
-
 
                 //TODO: currently only sends data back to sender, learn how to connect to multiple clients
 
@@ -90,7 +87,6 @@ public class Server {
 
                         users.get(senderIndex).getConversation(message.getReceiver()).editMessage(message, content);
                         //users.get(receiverIndex).getConversation(message.getSender()).editMessage(message, content);
-
                         //Edit command works on both users with only one edited for some reason
 
                         sendGuiData(senderIndex, users, writer);
@@ -132,14 +128,16 @@ public class Server {
                         //Find user by username, add Conversation to conversations, set openChat to conversation
                         //If user doesn't exist, error code and message is sent to client
 
-                        //TODO: send error if chat already exists
-
                         fields = command.split(" ");
                         senderIndex = findUser(fields[1], users);
                         receiverIndex = findUser(fields[0], users);
 
                         if (receiverIndex == -1) {
-                            sendError("Error: Username/Chat does not exist", writer);
+                            sendError("Error: User is not online or username does not exist.", writer);
+
+                        } else if (new ArrayList<>(Arrays.asList(users.get(findUser(fields[1],
+                                users)).getChats())).contains(fields[0])) {
+                            sendError("Error: Chat already exists.", writer);
 
                         } else {
 
@@ -172,41 +170,48 @@ public class Server {
 
                         break;
 
+                    case "lu":
+                        //Login user: lu <username> <password>
+                        //retrieve conversations from file, send list of chats to client, set openChat to most recent,
+                        //send list of messages from openChat to client
+
+                        fields = command.split(" ");
+
+                        //Check that login information is correct
+                        if (logins.contains(command)) {
+                            users.add(loadUser(fields[0], fields[1]));
+                            sendConfirmation(writer);
+
+                        } else {
+                            sendError("Error: Username/Password is not correct.", writer);
+                        }
+
+                        break;
+
                     case "nu":
                         //New user: nu <username> <password>
                         //Create new user object and keep it in users array
 
                         fields = command.split(" ");
 
-                        if (fields.length < 2) {
-                            sendError("Please enter valid username or password.", writer);
-                        } else if (findUser(fields[0], users) != -1) {
-                            sendError("Username taken.", writer);
+                        //Check that username is available
+                        if (logins.contains(command)) {
+                            sendError("Error: Username taken.", writer);
                         } else {
                             users.add(new User(fields[0], fields[1]));
-
-                            /*
-                            for (int i = 0; i < users.size(); i++) {
-                                System.out.println(users.get(i));
-                            }
-                            */
-                            //TODO: store the new user data to user data file
+                            addLogin(fields[0], fields[1]);
 
                             sendConfirmation(writer);
                         }
 
                         break;
 
-                    case "lu":
-                        //Load user: lu <username>
-                        //retrieve conversations from file, send list of chats to client, set openChat to most recent,
-                        //send list of messages from openChat to client
-
-                        break;
-
                     case "cu":
                         //Close user: cu <username>
                         //Rewrite all User data to file, delete User from users
+
+                        closeUser(users.get(findUser(command, users)));
+                        sendConfirmation(writer);
 
                         break;
 
@@ -221,16 +226,134 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
 
+
+    /**
+     * Offloads user conversation data to file system
+     *
+     * @param user Complete User object
+     */
+    public static void closeUser(@NotNull User user) {
+
+        ArrayList<Conversation> conversations = user.getConversations();
+
+        for (Conversation conversation : conversations) {
+
+            File userFile = new File("src/Server/" + user.getUsername() +
+                    '/' + conversation.getChat() + ".txt");
+
+            userFile.getParentFile().mkdirs();
+            if (!userFile.exists()) {
+                try {
+                    userFile.createNewFile();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(userFile, false);
+                 PrintWriter pw = new PrintWriter(fos)) {
+
+                pw.println(conversation.getLastModified());
+
+                ArrayList<Message> messages = conversation.getMessages();
+
+                for (Message message : messages) {
+                    pw.println(message.toString());
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     /**
-     * Initialize user data files
+     * Loads user conversation data from file system and returns complete user object
+     *
+     * @param username Username of user
+     * @param password Password of user
+     * @return Complete User object
      */
-    public static void initialize() {
-        //TODO: import user data file to the users array list
+    public static User loadUser(String username, String password) {
+
+        File userFile = new File("src/Server/" + username);
+        File[] conversations = userFile.listFiles();
+
+        User user = new User(username, password);
+
+        for (File conversation : conversations) {
+
+            try (FileReader fr = new FileReader(conversation);
+                 BufferedReader bfr = new BufferedReader(fr)) {
+
+                String chat = conversation.getName();
+                chat = chat.substring(0, chat.length() - 4);
+
+                ArrayList<Message> messages = new ArrayList<>();
+
+                String line = bfr.readLine();
+                long lastModified = Long.parseLong(line);
+
+                line = bfr.readLine();
+                while (line != null) {
+                    messages.add(new Message(line));
+                    line = bfr.readLine();
+                }
+
+                user.addConversation(new Conversation(chat, lastModified, messages));
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        user.setOpenChat(user.getChats()[0]);
+
+        return user;
     }
 
+    /**
+     * Imports all usernames and passwords to ArrayList of logins (from main)
+     */
+    public static ArrayList<String> importLogins() {
+        try (FileReader fr = new FileReader("src/Server/logins.txt");
+             BufferedReader bfr = new BufferedReader(fr)) {
+
+            ArrayList<String> logins = new ArrayList<>();
+
+            String line = bfr.readLine();
+            while (line != null) {
+                logins.add(line);
+                line = bfr.readLine();
+            }
+
+            return logins;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    /**
+     * Adds login information to ArrayList of logins (from main)
+     *
+     * @param username Username of user
+     * @param password Password of user
+     */
+    public static void addLogin(String username, String password) {
+        try (FileOutputStream fos = new FileOutputStream("src/Server/logins.txt", true);
+             PrintWriter pw = new PrintWriter(fos)) {
+
+            pw.println(username + " " + password);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Finds the index of the user with the specified username
@@ -294,7 +417,4 @@ public class Server {
         writer.println();
         writer.flush();
     }
-
 }
-
-

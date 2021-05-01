@@ -7,7 +7,7 @@ import java.util.Collections;
 
 public class User {
     private final String username; //Username of user
-    private final String password; //Password of user
+    private String password; //Password of user
     private String openChat; //Chat that user currently has visible
     private final ArrayList<Conversation> conversations; //ArrayList of conversations
 
@@ -60,6 +60,15 @@ public class User {
         return conversations;
     }
 
+
+    /**
+     * Sets the password of this User
+     *
+     * @param password The new password of the user
+     */
+    public void setPassword(String password) {
+        this.password = password;
+    }
 
     /**
      * Sets the openChat of this User

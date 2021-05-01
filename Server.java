@@ -17,6 +17,7 @@ import java.util.Arrays;
  * Login user:             lu <username> <password>
  * New user:               nu <username> <password>
  * Close user:             cu <username>
+ * Edit user:              eu <username> <password> <newPassword>
  * Export conversation:    xc <chat> <username> <filename> (incomplete)
  * <p>
  * Message.toString() ->   Message<sender=s, receiver=r, timeStamp=yyyy/MM/dd HH:mm:ss, content=c>
@@ -49,8 +50,6 @@ public class Server {
 
                 String direction = command.substring(0, 2);
                 command = command.substring(3);
-
-                //TODO: Allow users to edit accounts
 
                 //TODO: currently only sends data back to sender, learn how to connect to multiple clients
 
@@ -207,7 +206,7 @@ public class Server {
                         if (checkLogins(fields[0], logins)) {
                             sendError("Error: Username taken.", writer);
                         } else {
-                            users.add(new User(fields[0], fields[1]));
+                            //users.add(new User(fields[0], fields[1]));
                             addLogin(fields[0], fields[1]);
                             logins.add(fields[0] + " " + fields[1]);
 
@@ -223,6 +222,34 @@ public class Server {
                         closeUser(users.get(findUser(command, users)));
                         users.remove(findUser(command, users));
                         sendConfirmation(writer);
+
+                        break;
+
+                    case "eu":
+                        //Edit user: eu <username> <password> <newPassword>
+                        //Change the user's password to the new password
+
+                        fields = command.split(" ");
+
+                        //User must enter the logged in and have the correct current password
+                        if (findUser(fields[0], users) == -1) {
+                            sendError("Error: Wrong username.", writer);
+                        } else if (!users.get(findUser(fields[0], users)).getPassword().equals(fields[1])) {
+                            sendError("Error: Wrong password.", writer);
+                        } else {
+                            users.get(findUser(fields[0], users)).setPassword(fields[2]);
+
+                            for (int i = 0; i < logins.size(); i++) {
+                                if (logins.get(i).substring(0, logins.get(i).indexOf(" ")).equals(fields[0])) {
+                                    logins.remove(i);
+                                    logins.add(fields[0] + " " + fields[2]);
+                                }
+                            }
+
+                            replaceLogin(logins);
+
+                            sendConfirmation(writer);
+                        }
 
                         break;
 
@@ -333,7 +360,7 @@ public class Server {
      */
     public static ArrayList<String> importLogins() {
         try (FileReader fr = new FileReader("src/Server/logins.txt");
-             BufferedReader bfr = new BufferedReader(fr)) {
+            BufferedReader bfr = new BufferedReader(fr)) {
 
             ArrayList<String> logins = new ArrayList<>();
 
@@ -369,6 +396,23 @@ public class Server {
         }
     }
 
+
+    /**
+     * Replace the logins file with current logins ArrayList
+     *
+     * @param logins ArrayList of logins (from main)
+     */
+    public static void replaceLogin(ArrayList<String> logins) {
+        try (FileOutputStream fos = new FileOutputStream("src/Server/logins.txt", false);
+             PrintWriter pw = new PrintWriter(fos)) {
+            for (int i = 0; i < logins.size(); i++) {
+                pw.println(logins.get(i));
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Finds the logins contains the specified username

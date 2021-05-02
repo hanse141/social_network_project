@@ -11,6 +11,7 @@ import java.util.Date;
 public class Conversation implements Comparable<Conversation> {
     private final String chat; //Name of chat (receiver or group)
     private long lastModified; //Time in milliseconds since epoch of last modification
+    private boolean hidden; //If the user has deleted the conversation
     private final ArrayList<Message> messages; //ArrayList of messages
 
     /**
@@ -21,6 +22,7 @@ public class Conversation implements Comparable<Conversation> {
     public Conversation(String chat) {
         this.chat = chat;
         this.lastModified = new Date().getTime();
+        this.hidden = false;
         this.messages = new ArrayList<Message>();
     }
 
@@ -29,11 +31,13 @@ public class Conversation implements Comparable<Conversation> {
      *
      * @param chat         Name of chat
      * @param lastModified Time in milliseconds since epoch of last modification
+     * @param hidden       If the user has deleted the conversation
      * @param messages     ArrayList of messages
      */
-    public Conversation(String chat, long lastModified, ArrayList<Message> messages) {
+    public Conversation(String chat, long lastModified, boolean hidden, ArrayList<Message> messages) {
         this.chat = chat;
         this.lastModified = lastModified;
+        this.hidden = hidden;
         this.messages = messages;
     }
 
@@ -53,6 +57,24 @@ public class Conversation implements Comparable<Conversation> {
      */
     public long getLastModified() {
         return lastModified;
+    }
+
+    /**
+     * Returns the hidden of this Conversation
+     *
+     * @return If the user has deleted the conversation
+     */
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    /**
+     * Sets the hidden of this Conversation
+     *
+     * @param hidden If the user has deleted the conversation
+     */
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
     }
 
     /**
@@ -78,6 +100,7 @@ public class Conversation implements Comparable<Conversation> {
      */
     public void addMessage(Message message) {
         messages.add(message);
+        this.setHidden(false);
         setLastModified();
     }
 
@@ -112,8 +135,8 @@ public class Conversation implements Comparable<Conversation> {
         int size = messages.size();
         int index;
 
-        if (size >= 10) {
-            index = size - 10;
+        if (size >= 20) {
+            index = size - 20;
         } else {
             index = 0;
         }
@@ -135,7 +158,7 @@ public class Conversation implements Comparable<Conversation> {
      */
     @Override
     public int compareTo(Conversation conversation) {
-        return Long.compare(this.getLastModified(), conversation.getLastModified());
+        return Long.compare(conversation.getLastModified(), this.getLastModified());
     }
 
     /**

@@ -86,7 +86,7 @@ public class Message {
      */
     public void edit(String content) {
         this.content = content;
-        this.timeStamp = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(new Date());
+        //this.timeStamp = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(new Date());
     }
 
     /**

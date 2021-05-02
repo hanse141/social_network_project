@@ -60,7 +60,6 @@ public class User {
         return conversations;
     }
 
-
     /**
      * Sets the password of this User
      *
@@ -131,14 +130,64 @@ public class User {
      * @return List of chats
      */
     public String[] getChats() {
-        Collections.sort(conversations);
 
-        String[] chats = new String[conversations.size()];
+        if (conversations.size() == 0) {
+            return new String[0];
 
-        for (int i = 0; i < conversations.size(); i++) {
-            chats[i] = conversations.get(i).getChat();
+        } else {
+            Collections.sort(conversations);
+
+            ArrayList<String> chats = new ArrayList<>();
+
+            for (int i = 0; i < conversations.size(); i++) {
+                if (!conversations.get(i).isHidden()) {
+                    chats.add(conversations.get(i).getChat());
+                }
+            }
+
+            String[] chatArr = new String[chats.size()];
+            chatArr = chats.toArray(chatArr);
+
+            return chatArr;
         }
+    }
 
-        return chats;
+    /**
+     * @param commands
+     */
+    public void processHolds(ArrayList<String> commands) {
+        String[] fields;
+        Message message;
+
+        for (String command : commands) {
+
+            String direction = command.substring(0, 2);
+            command = command.substring(3);
+
+            switch (direction) {
+
+                case "nm":
+                    message = new Message(command);
+                    this.getConversation(message.getSender()).addMessage(message);
+                    break;
+
+                case "em":
+                    int index = command.indexOf("Message<sender=");
+                    String content = command.substring(0, index - 1);
+                    message = new Message(command.substring(index));
+                    this.getConversation(message.getSender()).editMessage(message, content);
+                    break;
+
+                case "dm":
+                    message = new Message(command);
+                    this.getConversation(message.getSender()).deleteMessage(message);
+                    break;
+
+                case "nc":
+                    fields = command.split(" ");
+                    this.addConversation(new Conversation(fields[1]));
+                    break;
+            }
+        }
     }
 }

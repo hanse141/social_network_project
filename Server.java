@@ -174,8 +174,6 @@ public class Server {
                         //retrieve conversations from file, send list of chats to client, set openChat to most recent,
                         //send list of messages from openChat to client
 
-                        //TODO: Fix NullPointerException when dedicated user folder is not created before calling lu
-
                         fields = command.split(" ");
 
                         //Check that login information is correct
@@ -206,9 +204,15 @@ public class Server {
                         if (checkLogins(fields[0], logins)) {
                             sendError("Error: Username taken.", writer);
                         } else {
-                            //users.add(new User(fields[0], fields[1]));
+                            users.add(new User(fields[0], fields[1]));
                             addLogin(fields[0], fields[1]);
                             logins.add(fields[0] + " " + fields[1]);
+
+
+                            for (int i = 0; i < users.size(); i++) {
+                                System.out.println(users.get(i).getUsername());
+                            }
+
 
                             sendConfirmation(writer);
                         }
@@ -277,12 +281,21 @@ public class Server {
 
         ArrayList<Conversation> conversations = user.getConversations();
 
+        File userFolder = new File("src/Server/" + user.getUsername());
+
+        if (!userFolder.exists()) {
+            if (userFolder.mkdirs()) {
+                System.out.println("Folder created");
+            } else {
+                System.out.println("Folder not created");
+            }
+        }
+
         for (Conversation conversation : conversations) {
 
             File userFile = new File("src/Server/" + user.getUsername() +
                     '/' + conversation.getChat() + ".txt");
 
-            userFile.getParentFile().mkdirs();
             if (!userFile.exists()) {
                 try {
                     userFile.createNewFile();
@@ -319,6 +332,7 @@ public class Server {
 
         File userFile = new File("src/Server/" + username);
         File[] conversations = userFile.listFiles();
+
 
         User user = new User(username, password);
 

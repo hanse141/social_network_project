@@ -1,61 +1,45 @@
-# PJ05
+# Project 5, Option 3: Messaging application with Login & registering interfaces.
+## By: Marina Beshay, Xipeng (Alex) Wang, Andrew Sovik, Derek Hansen, Haoxi Wu.
 
-#Messaging Application
+## Instructions to compile:
+### 1. Via terminal, use "javac Server.java" and then do "javac Client.java"
+### 2. To run the program, run the Server.java first in one window, then run the Client.java multiple times then it'll open up different GUI windows automatically.
 
-#-GUI - Marina/Derek
-#--JFrame w/ several JPanels
-#--Input messages with JTextFields; create a new Message object with each String inputed from the JTextField
-#--All messages would be stored in a csv file
-#--Messages contain Message sender, message receiver, timestamp, etc.; allocate each conversation accordingly
-#---Group name would be the "to/message receiver" field
+## Submissions:
+### 1. Derek Hansen submitted the report on Brightspace.
+### 2. Marina Beshay submitted the Vocareum workspace.
 
-#-Store messages server-side
 
-#-Error statements
-#--Include a series of error codes; client-side would run under try-catch block, and if an error occurs, it would print an error message
+## Client.java:
+### Contains GUI and data of open Conversations. Also sends messages to the server.
 
-#-Accounts -Alex/Xipeng
-#--Sign up/login when you first open the application
-#--Account can store username, password, and a list of openable conversations
-#--Have some page within the program to edit accounts
-#--Username must be unique; store all usernames in an ArrayList; check the username with that ArrayList to ensure that it is unique
+## Server.java:
+### Contains data of connected users, receives messages, sends open conversation to client.
+### Also contains switch cases for the commands that user chooses.(i.e. create new message & conversations, hide conversations, delete/edit messages, creating new users, login users, close users, and delete Users.
 
-#-Message Editing/Deletion - Andrew
-#--Program only displays edit and deletion options for own message
-#--Start with barebones approach (always show icons/buttons for edit and delete message); if time permits, add a way to hide messages
-#--Should delete the message both client and server side, rather than just hiding it in the UI
+## ClientHandler.java:
+### This is a thread class that is used in the server and runs the different commands used.
 
-#-Concurrency
-#--Thread to handle message sending and receiving
-#--Thread for account creation
-#--Thread for checking message ownership (for editing and deletion)
-#--When finding messages to export, have one thread for sent messages and another for received messages
+## ServerConnection.java:
+### This is a thread class that is used in the client and tests to see if gui data will be sent if the "gd" command is called.
 
-#-Export messages through csv files
-#--Similar to previous output assignments, but should be done with commas rather than spaces
-#--Separate csv file for each user; contains every message sent to them or by them
+## User.java:
+### This is an object class of the user. It contains username, password, open chat, and an array list of conversations, along with their getters and setters.
 
-#-See conversations in one place
-#--All conversations should be tied with a username and stored server-side
-#--Conversation selections (i.e. which ones are open) should be done client-side
+## Message.java:
+### This is an object class of the messages.This class has the sender, receiver, time stamp, and content fields with the appropriate getters and setters. This class also contains the edit message method, which can edit the message if User chooses to and updates the time stamp.
 
-#-Should be able to delete conversations from list
-#--Conversation list can be stored as an ArrayList with a Message object
-#--Message object would store participants, username, time, and message contents
+## Conversation.java:
+### This class is an object class of the conversations and it implements the comparable conversations interface which is used in the compareTo method when displaying the messages based on the order of time stamps. This class also stores the conversations in a file.
 
-#-Commands to set between client and server
-#--Messages are toString of the object
-#--"edit oldmessage newmessage" -> Edits existing message
-#--new -> Add message to list
-#--delete-> deletes message
+## Gui.java:
+### This class extends JComponent and implements Runnable. It contains the bulk of the GUI for the messages and implements the buttons with their appropriate functions.
 
-#-Command Parser/Interpreter
-#--Split command by spaces
-#--Contains a switch statement based around the first word
-#---Runs the method with the same name as the first word
-#---default would do nothing
+## Login.java:
+### This class extends JComponent and implements Runnable. It implements the Login and Register GUI for this project, with appropriate methods to ensure verification.
 
-#Low Priority 
-#-User notification
-#-Custom messaging environments
-#-Moderation
+## TESTS PERFORMED:
+### RunLocalTest.java provides several methods that can test the methods of each class. As stated in CampusWire, the previous test cases used in the assigments were used as a source to implement the test cases.
+
+## GUI TESTING:
+### To test the GUI, it is best to run the server and client (run the client multiple times) then use the given logins.txt file to enter login information. To register, just go to the appropriate button to register then enter the information. The sign up information should be added to the logins.txt file. When logged in, the message GUI should appear and users can send messages and they can see the messages concurrently. There will be a delete and edit button for each program that users can use to edit or delete their own messages. There is also a settings button that users can use to delete their account or change their password.

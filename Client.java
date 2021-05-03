@@ -1,39 +1,53 @@
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.Scanner;
 
 /**
  * Client class that contains GUI, data of open conversation, and sends messages to server
- * <p>
- * List of commands and formatting:
- * Send gui data:  gd Chats<[chat1, chat2...]> Messages<[Message<..1>, Message<..2>...]>
- * Send error:     er message
  */
 
 public class Client {
-    public static void main(String[] args) throws IOException {
+    private static final String HOST = "localhost"; //Host of socket
+    private static final int PORT = 4242; //Port of socket
+
+    public static void main(String[] args) {
 
         //Connect to server, initialize reader and writer
-        try (Scanner scan = new Scanner(System.in);
-             Socket socket = new Socket("localhost", 4242);
-             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-             PrintWriter writer = new PrintWriter(socket.getOutputStream())) {
+        try (Socket socket = new Socket(HOST, PORT);
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
 
+            ServerConnection serverConnection = new ServerConnection(socket);
+            new Thread(serverConnection).start();
+
+            //Send and receive commands with server, update GUI accordingly
             while (true) {
 
-                System.out.println("Command to send to server:");
-                String command = scan.nextLine();
+                if (serverConnection.isReceivedGuiCommand()) {
 
-                writer.write(command);
-                writer.println();
-                writer.flush(); //Ensure data is sent to the server
+                    //TODO: Process gd command here
+                    System.out.println(serverConnection.getLastGuiCommand());
 
-                String guiData = reader.readLine();
-                System.out.println(guiData);
+                    serverConnection.setReceivedGuiCommand(false);
+
+                } else if (serverConnection.isReceivedCommand()) {
+
+                    //Exit condition of loop
+                    if (!serverConnection.isRunning()) {
+                        break;
+                    }
+
+                    //TODO: Process er or su command here (sent by nc, lu, cu, eu)
+                    System.out.println(serverConnection.getLastCommand());
+
+                    serverConnection.setReceivedCommand(false);
+                }
+
+                //TODO: Send commands to server here
+
             }
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

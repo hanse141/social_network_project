@@ -22,7 +22,7 @@ public class Message {
     public Message(String sender, String receiver, String content) {
         this.sender = sender;
         this.receiver = receiver;
-        this.timeStamp = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(new Date());
+        this.timeStamp = new SimpleDateFormat("MM/dd hh:mm aa").format(new Date());
         this.content = content;
     }
 

@@ -1,19 +1,23 @@
 import org.junit.Test;
 import org.junit.After;
+
 import java.lang.reflect.Field;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.rules.Timeout;
-
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 
+import javax.annotation.processing.Processor;
 import javax.swing.*;
 import java.io.*;
 import java.lang.reflect.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.lang.reflect.InvocationTargetException;
 import java.util.UUID;
@@ -25,8 +29,8 @@ import static org.junit.Assert.*;
  *
  * <p>Purdue University -- CS18000 -- Spring 2021</p>
  *
- * @author Purdue CS
- * @version January 19, 2021
+ * @author Marina Beshay
+ * @version May 3, 2021
  */
 public class RunLocalTest {
     public static void main(String[] args) {
@@ -42,11 +46,11 @@ public class RunLocalTest {
 
     /**
      * A set of public test cases.
-     *
+     * Sources: Junit tests from past assignments
      * <p>Purdue University -- CS18000 -- Spring 2021</p>
      *
-     * @author Purdue CS
-     * @version January 19, 2021
+     * @author Marina Beshay
+     * @version May 3, 2021
      */
     public static class TestCase {
         private final PrintStream originalOutput = System.out;
@@ -80,10 +84,7 @@ public class RunLocalTest {
             System.setIn(testIn);
         }
 
-    //begin conversation test cases
-
-        //should i create test cases for the fields?
-
+        //begin conversation test cases
         //Conversation.java constructor
         @Test(timeout = 1_000)
         public void conversationFirstParameterizedConstructorDeclarationTest() {
@@ -488,6 +489,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has zero `throws` clause!", expectedLength, exceptions.length);
 
         }
+
         @Test(timeout = 1000)
         public void conversationDeleteMessage() {
 
@@ -535,6 +537,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has zero `throws` clause!", expectedLength, exceptions.length);
 
         }
+
         @Test(timeout = 1000)
         public void conversationGetVisibleMessages() {
 
@@ -630,6 +633,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has zero `throws` clause!", expectedLength, exceptions.length);
 
         }
+
         @Test(timeout = 1000)
         public void conversationExport() {
 
@@ -679,7 +683,6 @@ public class RunLocalTest {
         } //end conversation test cases
 
 
-
         //begin Message.java test cases
         @Test(timeout = 1000)
         public void messageClassDeclarationTest() {
@@ -706,21 +709,26 @@ public class RunLocalTest {
 
             Assert.assertEquals("Ensure that `" + className + "` implements 0 interfaces!", 0, superinterfaces.length);
         }
+
         @Test(timeout = 1_000)
-        public void messageFirstParameterizedConstructorDeclarationTest() {
-            Class<?> clazz;
+        public void messageFirstParameterizedConstructorDeclarationTest() throws NoSuchMethodException {
+            Class<?> clazz = Message.class;
             String className = "Message";
             Constructor<?> constructor;
             int modifiers;
             Class<?>[] exceptions;
             int expectedLength = 0;
+            boolean test = true;
 
-            clazz = Message.class;
 
             try {
                 constructor = clazz.getDeclaredConstructor(String.class, String.class, String.class);
+                test = true;
             } catch (NoSuchMethodException e) {
                 Assert.fail("Ensure that `" + className + "` declares a constructor that is `public` and has 3 parameters with type String!");
+                if (!test) {
+                    Assert.fail("Ensure input matches parameter types");
+                }
 
                 return;
             }
@@ -838,6 +846,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void getTimeStampMethodTest() {
             Class<?> clazz;
@@ -913,6 +922,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void messageEdit() {
 
@@ -960,6 +970,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has one `throws` clause!", expectedLength, exceptions.length);
 
         }
+
         @Test(timeout = 1000)
         public void messageToString() {
 
@@ -1006,80 +1017,82 @@ public class RunLocalTest {
 
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has an empty `throws` clause!", expectedLength, exceptions.length);
         }
-            @Test(timeout = 1000)
-            public void messageEquals() {
 
-                Class<?> clazz = Message.class;
-                String className = "Message";
+        @Test(timeout = 1000)
+        public void messageEquals() {
 
-                Method method;
-                int modifiers;
-                Class<?> actualReturnType;
-                int expectedLength = 0;
-                Class<?>[] exceptions;
+            Class<?> clazz = Message.class;
+            String className = "Message";
 
-                // Set the method that you want to test
-                String methodName = "equals";
+            Method method;
+            int modifiers;
+            Class<?> actualReturnType;
+            int expectedLength = 0;
+            Class<?>[] exceptions;
 
-                // Set the return type of the method you want to test
-                // Use the type + .class
-                // For example, String.class or int.class
-                Class<?> expectedReturnType = boolean.class;
+            // Set the method that you want to test
+            String methodName = "equals";
 
-                // Attempt to access the class method
-                try {
-                    method = clazz.getDeclaredMethod(methodName, Object.class);
-                } catch (NoSuchMethodException e) {
-                    Assert.fail("Ensure that `" + className + "` declares a method named `" + methodName + "` that" +
-                            " has 1 parameter!");
+            // Set the return type of the method you want to test
+            // Use the type + .class
+            // For example, String.class or int.class
+            Class<?> expectedReturnType = boolean.class;
 
-                    return;
-                } //end try catch
+            // Attempt to access the class method
+            try {
+                method = clazz.getDeclaredMethod(methodName, Object.class);
+            } catch (NoSuchMethodException e) {
+                Assert.fail("Ensure that `" + className + "` declares a method named `" + methodName + "` that" +
+                        " has 1 parameter!");
 
-                // Perform tests
+                return;
+            } //end try catch
 
-                modifiers = method.getModifiers();
+            // Perform tests
 
-                actualReturnType = method.getReturnType();
+            modifiers = method.getModifiers();
 
-                exceptions = method.getExceptionTypes();
+            actualReturnType = method.getReturnType();
 
-                Assert.assertTrue("Ensure that `" + className + "`'s `" + methodName + "` method is `public`!", Modifier.isPublic(modifiers));
+            exceptions = method.getExceptionTypes();
 
-                Assert.assertFalse("Ensure that `" + className + "`'s `" + methodName + "` method is NOT `static`!", Modifier.isStatic(modifiers));
+            Assert.assertTrue("Ensure that `" + className + "`'s `" + methodName + "` method is `public`!", Modifier.isPublic(modifiers));
 
-                Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
+            Assert.assertFalse("Ensure that `" + className + "`'s `" + methodName + "` method is NOT `static`!", Modifier.isStatic(modifiers));
 
-                Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has an empty `throws` clause!", expectedLength, exceptions.length);
+            Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
-            } //end Message.java Test cases
+            Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has an empty `throws` clause!", expectedLength, exceptions.length);
 
-            //begin User.java
-            @Test(timeout = 1000)
-            public void userClassDeclarationTest() {
-                Class<?> clazz;
-                String className;
-                int modifiers;
-                Class<?> superclass;
-                Class<?>[] superinterfaces;
+        } //end Message.java Test cases
 
-                clazz = Conversation.class;
-                className = "User";
+        //begin User.java
+        @Test(timeout = 1000)
+        public void userClassDeclarationTest() {
+            Class<?> clazz;
+            String className;
+            int modifiers;
+            Class<?> superclass;
+            Class<?>[] superinterfaces;
 
-                modifiers = clazz.getModifiers();
+            clazz = Conversation.class;
+            className = "User";
 
-                superclass = clazz.getSuperclass();
+            modifiers = clazz.getModifiers();
 
-                superinterfaces = clazz.getInterfaces();
+            superclass = clazz.getSuperclass();
 
-                Assert.assertTrue("Ensure that `" + className + "` is `public`!", Modifier.isPublic(modifiers));
+            superinterfaces = clazz.getInterfaces();
 
-                Assert.assertFalse("Ensure that `" + className + "` is NOT `abstract`!", Modifier.isAbstract(modifiers));
+            Assert.assertTrue("Ensure that `" + className + "` is `public`!", Modifier.isPublic(modifiers));
 
-                Assert.assertEquals("Ensure that `" + className + "` extends `Object`!", Object.class, superclass);
+            Assert.assertFalse("Ensure that `" + className + "` is NOT `abstract`!", Modifier.isAbstract(modifiers));
 
-                Assert.assertEquals("Ensure that `" + className + "` implements 0 interface!", 0, superinterfaces.length);
-            }
+            Assert.assertEquals("Ensure that `" + className + "` extends `Object`!", Object.class, superclass);
+
+            Assert.assertEquals("Ensure that `" + className + "` implements 0 interface!", 0, superinterfaces.length);
+        }
+
         @Test(timeout = 1_000)
         public void userParameterizedConstructorDeclarationTest() {
             Class<?> clazz;
@@ -1145,6 +1158,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void userGetPasswordMethodTest() {
             Class<?> clazz;
@@ -1182,6 +1196,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void userGetOpenChatMethodTest() {
             Class<?> clazz;
@@ -1219,6 +1234,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void userGetConversationsMethodTest() {
             Class<?> clazz;
@@ -1301,6 +1317,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void userSetOpenChatMethodTest() {
 
@@ -1345,6 +1362,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void userAddConversationMethodTest() {
 
@@ -1389,6 +1407,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void userDeleteConversationMethodTest() {
 
@@ -1433,6 +1452,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void userTypeConversationGetConversationMethodTest() {
 
@@ -1560,6 +1580,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void clientHandlerClassDeclarationTest() {
             Class<?> clazz;
@@ -1585,6 +1606,7 @@ public class RunLocalTest {
 
             Assert.assertEquals("Ensure that `" + className + "` implements 1 interface!", 1, superinterfaces.length);
         }
+
         @Test(timeout = 1_000)
         public void clientHandlerFirstParameterizedConstructorDeclarationTest() {
             Class<?> clazz;
@@ -1688,6 +1710,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void clientHandlerSetUsernameMethodTest() {
 
@@ -1732,6 +1755,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         //WORK ON THIS LATER!!!
         public void runMethod() {
@@ -1759,6 +1783,7 @@ public class RunLocalTest {
             } //end try catch
 
         }
+
         @Test(timeout = 1000)
         public void clientHandlerHoldCommandMethodTest() {
 
@@ -1802,6 +1827,7 @@ public class RunLocalTest {
 
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
         }
+
         @Test(timeout = 1000)
         public void clientHandlerCloseUserMethodTest() {
 
@@ -1845,6 +1871,7 @@ public class RunLocalTest {
 
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
         }
+
         @Test(timeout = 1000)
         public void clientHandlerLoadUserMethodTest() {
 
@@ -1888,6 +1915,7 @@ public class RunLocalTest {
 
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
         }
+
         @Test(timeout = 1000)
         public void clientHandlerUpdateLoginsMethodTest() {
 
@@ -1931,6 +1959,7 @@ public class RunLocalTest {
 
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
         }
+
         @Test(timeout = 1000)
         public void clientHandlerFindWriterMethodTest() {
 
@@ -2150,6 +2179,7 @@ public class RunLocalTest {
 
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
         }
+
         @Test(timeout = 1000)
         public void clientHandlerSendCommandMethodTest() {
 
@@ -2221,6 +2251,7 @@ public class RunLocalTest {
 
             Assert.assertEquals("Ensure that `" + className + "` implements 1 interface!", 1, superinterfaces.length);
         }
+
         @Test(timeout = 1_000)
         public void serverConnectionFirstParameterizedConstructorDeclarationTest() {
             Class<?> clazz;
@@ -2248,6 +2279,7 @@ public class RunLocalTest {
 
             Assert.assertEquals("Ensure that `" + className + "`'s parameterized constructor has 1 `throws` clause!", expectedLength, exceptions.length);
         } //end constructor
+
         @Test(timeout = 1000)
         public void serverConnectionGetLastGuiCommandMethodTest() {
             Class<?> clazz;
@@ -2285,6 +2317,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void serverConnectionGetLastCommandMethodTest() {
             Class<?> clazz;
@@ -2322,6 +2355,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void serverConnectionIsReceivedGuiCommandMethodTest() {
             Class<?> clazz;
@@ -2359,6 +2393,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void serverConnectionIsReceivedCommandMethodTest() {
             Class<?> clazz;
@@ -2396,6 +2431,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void serverConnectionIsRunningMethodTest() {
             Class<?> clazz;
@@ -2433,6 +2469,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void serverConnectionSetReceivedGuiCommandMethodTest() {
             Class<?> clazz;
@@ -2470,6 +2507,7 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
         @Test(timeout = 1000)
         public void serverConnectionSetReceivedCommandMethodTest() {
             Class<?> clazz;
@@ -2507,6 +2545,14 @@ public class RunLocalTest {
             Assert.assertEquals("Ensure that `" + className + "`'s `" + methodName + "` method has the correct return type!", expectedReturnType, actualReturnType);
 
         }
+
+        @Test
+        public void serverConnectionRunMethodTest() throws IOException {
+            String command = "gd";
+            String command1 = "lu";
+
+        }
+
         //need to do run method for ServerConnection.java
         @Test(timeout = 1000)
         public void serverClassDeclarationTest() {
@@ -2533,6 +2579,7 @@ public class RunLocalTest {
 
             Assert.assertEquals("Ensure that `" + className + "` implements 0 interface!", 0, superinterfaces.length);
         }
+
         @Test(timeout = 1000)
         public void serverImportLoginsMethodTest() {
 
@@ -2578,31 +2625,7 @@ public class RunLocalTest {
         } //end Server.java
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     }
 
 
-
-    }
-
+}

@@ -6,7 +6,7 @@
 ### 2. To run the program, run the Server.java first in one window, then run the Client.java multiple times then it'll open up different GUI windows automatically.
 
 ## Submissions:
-### 1. Derek Hansen submitted the report on Brightspace.
+### 1. Xipeng Wang submitted the report on Brightspace.
 ### 2. Marina Beshay submitted the Vocareum workspace.
 
 

@@ -12,14 +12,20 @@ import java.util.Arrays;
  * Delete message:         dm Message<>
  * Load conversation:      lc <chat> <username>
  * New conversation:       nc <chat> <username>
- * Delete conversation:    dc <chat> <username>
+ * New group chat:         ng <chat > <username1> <username2>...
+ * Add to group chat:      ag <chat > <user to add> <username>
+ * Leave group chat:       lg <chat > <username>
+ * Hide conversation:      hc <chat> <username>
  * Login user:             lu <username> <password>
  * New user:               nu <username> <password>
  * Close user:             cu <username>
+ * Delete user:            du <username> <password>
  * Edit user:              eu <username> <password> <newPassword>
- * Export conversation:    xc <chat> <username> <filename> (incomplete)
+ * Export conversation:    xc <chat> <username>
  * <p>
  * Message.toString() ->   Message<sender=s, receiver=r, timeStamp=MM/dd hh:mm aa, content=c>
+ * Note: each command must be completely correct in every character or it will send an error
+ * Note: group chat names have a ' ' character appended to them and can contain spaces
  */
 
 public class ClientHandler implements Runnable {
@@ -67,16 +73,40 @@ public class ClientHandler implements Runnable {
     }
 
     /**
+     * Check that username of sender is same as username of client, disconnect if not
+     *
+     * @param username Username of sender
+     * @return If sender is client
+     */
+    public boolean userCheck(String username) {
+        if (username.equals(this.username)) {
+            return true;
+        } else {
+            int senderIndex = findUser(this.username);
+            closeUser(Server.users.get(senderIndex));
+            closeUser(Server.users.get(senderIndex));
+            Server.users.remove(senderIndex);
+            sendConfirmation("Goodbye.", out);
+            return false;
+        }
+    }
+
+    /**
      * Thread run method
      */
     @Override
     public void run() {
-        String[] fields; //Fields of command specific to case
+        String[] fields = null; //Fields of command specific to case
         int senderIndex; //Index of sender in users
         int receiverIndex; //Index of receiver in users
         Message message; //Message object specific to case
         String command = null; //Command received from client
         String direction = ""; //Two letter direction of command
+        String[] participants; //Participants of group chat
+        String groupInfo; //String of group information
+        String newGroupInfo; //String of new group information
+        int index; //Index of component in string
+        String chatName; //Name of group chat
 
         while (!direction.equals("cu")) {
 
@@ -99,18 +129,46 @@ public class ClientHandler implements Runnable {
                     //Add Message to messages for both clients
 
                     message = new Message(command);
+                    if (!userCheck(message.getSender())) return;
                     senderIndex = findUser(message.getSender());
-                    receiverIndex = findUser(message.getReceiver());
 
-                    Server.users.get(senderIndex).getConversation(message.getReceiver()).addMessage(message);
-                    sendGuiData(senderIndex, out);
+                    if (message.getReceiver().contains(" ")) { //Group chat
 
-                    if (receiverIndex != -1) {
-                        Server.users.get(receiverIndex).getConversation(message.getSender()).addMessage(message);
-                        sendGuiData(receiverIndex, findWriter(message.getReceiver()));
+                        fields = Server.users.get(senderIndex).getConversation(message.getReceiver()).getParticipants();
 
-                    } else {
-                        holdCommand(direction + ' ' + command, message.getReceiver());
+                        //Add chat to each user that exists
+                        for (String participant : fields) {
+                            receiverIndex = findUser(participant);
+
+                            if (receiverIndex != -1) {
+                                Server.users.get(receiverIndex).getConversation(message.getReceiver()).addMessage(message);
+                                sendGuiData(receiverIndex, findWriter(participant));
+
+                            } else {
+                                holdCommand(direction + ' ' + command, participant);
+                            }
+                        }
+
+                    } else { //Direct message
+
+                        if (doesUserExist(message.getReceiver())) {
+
+                            receiverIndex = findUser(message.getReceiver());
+
+                            Server.users.get(senderIndex).getConversation(message.getReceiver()).addMessage(message);
+                            sendGuiData(senderIndex, out);
+
+                            if (receiverIndex != -1) {
+                                Server.users.get(receiverIndex).getConversation(message.getSender()).addMessage(message);
+                                sendGuiData(receiverIndex, findWriter(message.getReceiver()));
+
+                            } else {
+                                holdCommand(direction + ' ' + command, message.getReceiver());
+                            }
+
+                        } else {
+                            sendError("Error: " + message.getReceiver() + " has deleted account.", out);
+                        }
                     }
 
                     break;
@@ -119,20 +177,63 @@ public class ClientHandler implements Runnable {
                     //Edit message: em <content> Message<>
                     //Edit Message in messages for both clients
 
-                    int index = command.indexOf("Message<sender=");
+                    index = command.indexOf("Message<sender=");
                     String content = command.substring(0, index - 1);
                     message = new Message(command.substring(index));
+                    if (!userCheck(message.getSender())) return;
                     senderIndex = findUser(message.getSender());
-                    receiverIndex = findUser(message.getReceiver());
 
-                    Server.users.get(senderIndex).getConversation(message.getReceiver()).editMessage(message, content);
-                    sendGuiData(senderIndex, out);
-                    sendGuiData(receiverIndex, findWriter(message.getReceiver()));
+                    if (message.getReceiver().contains(" ")) { //Group chat
 
-                    if (receiverIndex == -1) {
-                        holdCommand(direction + ' ' + command, message.getReceiver());
+                        for (String group : Server.groups) {
+                            if (group.startsWith(message.getReceiver())) {
+
+                                index = group.indexOf("  ");
+                                fields = group.substring(index + 2).split(" ");
+                                break;
+                            }
+                        }
+
+                        Server.users.get(findUser(message.getSender())).getConversation(message.getReceiver()).editMessage(message, content);
+                        sendGuiData(senderIndex, out);
+
+                        //Add chat to each user that exists
+                        for (String participant : fields) {
+                            receiverIndex = findUser(participant);
+
+                            if (receiverIndex != -1) {
+                                Server.users.get(receiverIndex).getConversation(message.getReceiver()).editMessage(message, content);
+                                sendGuiData(receiverIndex, findWriter(participant));
+
+                            } else {
+                                holdCommand(direction + ' ' + command, participant);
+                            }
+                        }
+
+                    } else { //Direct message
+
+                        if (doesUserExist(message.getReceiver())) {
+                            receiverIndex = findUser(message.getReceiver());
+
+                            Server.users.get(senderIndex).getConversation(message.getReceiver()).editMessage(message, content);
+                            sendGuiData(senderIndex, out);
+
+                            if (receiverIndex != -1) {
+                                try {
+                                    Server.users.get(receiverIndex).getConversation(message.getSender()).editMessage(message, content);
+                                } catch (ArrayIndexOutOfBoundsException ignored) {
+                                    sendGuiData(receiverIndex, findWriter(message.getReceiver()));
+                                } //Happens when shared conversation has same pointer in multiple users
+                                sendGuiData(receiverIndex, findWriter(message.getReceiver()));
+
+                            } else {
+                                holdCommand(direction + ' ' + command, message.getReceiver());
+                            }
+                        } else {
+                            sendError("Error: " + message.getReceiver() + " has deleted account.", out);
+                        }
+
                     }
-
                     break;
 
                 case "dm":
@@ -140,26 +241,61 @@ public class ClientHandler implements Runnable {
                     //Delete Message in messages for both clients
 
                     message = new Message(command);
+                    if (!userCheck(message.getSender())) return;
                     senderIndex = findUser(message.getSender());
                     receiverIndex = findUser(message.getReceiver());
 
-                    Server.users.get(senderIndex).getConversation(message.getReceiver()).deleteMessage(message);
-                    sendGuiData(senderIndex, out);
+                    if (message.getReceiver().contains(" ")) { //Group chat
 
-                    if (receiverIndex != -1) {
-                        Server.users.get(receiverIndex).getConversation(message.getSender()).deleteMessage(message);
+                        fields = Server.users.get(senderIndex).getConversation(message.getReceiver()).getParticipants();
 
-                    } else {
-                        holdCommand(direction + ' ' + command, message.getReceiver());
+                        //Add chat to each user that exists
+                        for (String participant : fields) {
+                            receiverIndex = findUser(participant);
+
+                            if (receiverIndex != -1) {
+                                Server.users.get(receiverIndex).getConversation(message.getReceiver()).deleteMessage(message);
+                                sendGuiData(receiverIndex, findWriter(participant));
+
+                            } else {
+                                holdCommand(direction + ' ' + command, participant);
+                            }
+                        }
+
+                    } else { //Direct message
+
+                        if (doesUserExist(message.getReceiver())) {
+
+                            Server.users.get(senderIndex).getConversation(message.getReceiver()).deleteMessage(message);
+                            sendGuiData(senderIndex, out);
+
+                            if (receiverIndex != -1) {
+                                Server.users.get(receiverIndex).getConversation(message.getSender()).deleteMessage(message);
+                                sendGuiData(receiverIndex, findWriter(message.getReceiver()));
+                            } else {
+                                holdCommand(direction + ' ' + command, message.getReceiver());
+                            }
+                        } else {
+                            sendError("Error: " + message.getReceiver() + " has deleted account.", out);
+                        }
                     }
-
                     break;
 
                 case "lc":
                     //Load conversation: lc <chat> <username>
                     //Set openChat to chat
 
-                    fields = command.split(" ");
+                    //Fix formatting for group chat
+                    if (command.contains("  ")) {
+                        index = command.indexOf("  ");
+                        fields = new String[2];
+                        fields[0] = command.substring(0, index + 1);
+                        fields[1] = command.substring(index + 2);
+                    } else {
+                        fields = command.split(" ");
+                    }
+
+                    if (!userCheck(fields[1])) return;
                     senderIndex = findUser(fields[1]);
 
                     Server.users.get(senderIndex).setOpenChat(fields[0]);
@@ -169,25 +305,16 @@ public class ClientHandler implements Runnable {
 
                 case "nc":
                     //New conversation: nc <chat> <username>
-                    //Sdd Conversation to conversations or set it to unhidden, set openChat to conversation.
+                    //Add Conversation to conversations or set it to unhidden, set openChat to conversation.
                     //If user doesn't exist or chat already exists, send error command to client
 
                     fields = command.split(" ");
+                    if (!userCheck(fields[1])) return;
                     senderIndex = findUser(fields[1]);
                     receiverIndex = findUser(fields[0]);
-                    boolean userExists = false;
-
-                    for (String login : Server.logins) {
-                        String username = login.split(" ")[0];
-
-                        if (username.equals(fields[0])) {
-                            userExists = true;
-                            break;
-                        }
-                    }
 
                     //Check if user exists or chat is hidden
-                    if (!userExists) {
+                    if (!doesUserExist(fields[0])) {
                         sendError("Error: User does not exist.", out);
 
                     } else if (Server.users.get(senderIndex).getConversations().contains(Server.users.get(senderIndex).getConversation(fields[0]))) {
@@ -203,13 +330,13 @@ public class ClientHandler implements Runnable {
                     } else {
                         Server.users.get(senderIndex).addConversation(new Conversation(fields[0]));
                         Server.users.get(senderIndex).setOpenChat(Server.users.get(senderIndex).getChats()[0]);
+                        sendConfirmation("Chat created.", out);
                         sendGuiData(senderIndex, out);
 
                         if (receiverIndex != -1) {
 
                             Server.users.get(receiverIndex).addConversation(new Conversation(fields[1]));
-                            Server.users.get(receiverIndex).setOpenChat(Server.users.get(receiverIndex).getChats()[0]);
-                            sendConfirmation("Chat created.", findWriter(fields[0]));
+                            sendGuiData(receiverIndex, findWriter(fields[0]));
                             sendGuiData(receiverIndex, findWriter(fields[0]));
 
                         } else {
@@ -219,11 +346,186 @@ public class ClientHandler implements Runnable {
 
                     break;
 
-                case "dc":
-                    //Delete conversation: dc <chat> <username>
+                case "ng":
+                    //New group chat: ng <chat> <username1> <username2>... (username1 is sender)
+                    //Add GroupConversation to conversations or set it to unhidden, set openChat to conversation.
+                    //If user doesn't exist or chat already exists, send error command to client
+
+                    index = command.indexOf("  ");
+                    chatName = command.substring(0, index);
+                    fields = command.substring(index + 2).split(" ");
+                    if (!userCheck(fields[0])) return;
+                    groupInfo = "";
+
+                    //Check if chat already exists
+                    senderIndex = findUser(fields[0]);
+                    if (Server.users.get(senderIndex).getConversations().contains(Server.users.get(senderIndex).getConversation(chatName))) {
+                        sendError("Error: Chat already exists.", out);
+                    } else {
+
+                        Conversation conversation = new Conversation(chatName, new String[0]);
+
+                        for (String participant : fields) {
+
+                            if (doesUserExist(participant)) {
+                                groupInfo = groupInfo + ' ' + participant;
+                                conversation.addParticipant(participant);
+                            } else {
+                                sendError("Error: User " + participant + " does not exist.", out);
+                            }
+                        }
+
+                        //Add chat to each user that exists
+                        for (String participant : conversation.getParticipants()) {
+                            receiverIndex = findUser(participant);
+
+                            if (receiverIndex != -1) {
+
+                                Server.users.get(receiverIndex).addConversation(new Conversation(conversation.getChat(), conversation.getParticipants()));
+                                Server.users.get(receiverIndex).setOpenChat(Server.users.get(receiverIndex).getChats()[0]);
+                                sendConfirmation("Chat created.", findWriter(participant));
+                                sendGuiData(receiverIndex, findWriter(participant));
+
+                            } else {
+                                holdCommand(direction + ' ' + command, participant);
+                            }
+                        }
+
+                        addGroup(chatName + ' ' + groupInfo);
+                        Server.groups.add(chatName + ' ' + groupInfo);
+                    }
+
+                    break;
+
+                case "ag":
+                    //Add to group chat: ag <chat> <user to add> <username>
+                    //Add user to group chat, send error if user is already in or doesn't exist
+
+                    //Fix formatting for group chat
+                    index = command.indexOf("  ");
+                    chatName = command.substring(0, index + 1);
+                    fields = command.substring(index + 2).split(" ");
+                    if (!userCheck(fields[1])) return;
+                    senderIndex = findUser(fields[1]);
+
+
+                    //Check that username exists
+                    if (!doesUserExist(fields[1])) {
+                        sendError("Error: User does not exist.", out);
+                    } else {
+
+                        //Add new user to participants for each participant
+                        participants = Server.users.get(senderIndex).getConversation(chatName).getParticipants().clone();
+                        groupInfo = ' ' + participants[0];
+
+                        if (Server.users.get(senderIndex).getConversation(chatName).addParticipant(fields[0])) {
+                            sendGuiData(senderIndex, out);
+
+                            for (int i = 1; i < participants.length; i++) {
+                                receiverIndex = findUser(participants[i]);
+                                System.out.println(participants[i]);
+
+                                groupInfo = groupInfo + ' ' + participants[i];
+
+                                if (receiverIndex != -1) {
+                                    Server.users.get(receiverIndex).getConversation(chatName).addParticipant(fields[0]);
+                                } else {
+                                    holdCommand(direction + ' ' + command, participants[i]);
+                                }
+                            }
+
+                            receiverIndex = findUser(fields[0]);
+
+                            //Create group chat for new user
+                            if (receiverIndex != -1) {
+                                Server.users.get(receiverIndex).addConversation(new Conversation(Server.users.get(senderIndex).getConversation(chatName)));
+                                sendGuiData(receiverIndex, findWriter(fields[0]));
+
+                            } else {
+                                ArrayList<Message> messages = Server.users.get(senderIndex).getConversation(chatName).getMessages();
+                                String messagesString = "";
+
+                                for (int i = 0; i < messages.size(); i++) {
+                                    messagesString = messagesString + messages.get(i).toString();
+                                }
+                                holdCommand(direction + ' ' + command + ' ' + messagesString, fields[0]);
+                            }
+
+                            //Update server file structure
+                            Server.groups.remove(chatName + groupInfo);
+                            Server.groups.add(chatName + groupInfo + ' ' + fields[0]);
+                            updateGroups();
+
+                        } else {
+                            sendError("Error: User is already in group chat.", out);
+                        }
+                    }
+
+                    break;
+
+                case "lg":
+                    //Leave group chat: lg <chat> <username>
+                    //Remove user from group chat, send error if user is not in chat
+
+                    //Fix formatting for group chat
+                    index = command.indexOf("  ");
+                    fields = new String[2];
+                    fields[0] = command.substring(0, index + 1);
+                    fields[1] = command.substring(index + 2);
+                    if (!userCheck(fields[1])) return;
+                    senderIndex = findUser(fields[1]);
+                    groupInfo = "";
+                    newGroupInfo = "";
+
+                    //Create list and string of participants
+                    participants = getParticipants(fields[0]);
+
+                    for (String participant : participants) {
+                        groupInfo = groupInfo + ' ' + participant;
+                        if (!participant.equals(fields[1])) {
+                            newGroupInfo = newGroupInfo + ' ' + participant;
+                        }
+                    }
+
+                    //Update server file structure
+                    Server.groups.remove(fields[0] + groupInfo);
+                    Server.groups.add(fields[0] + newGroupInfo);
+                    updateGroups();
+
+                    //Remove user from participants for each participant
+                    for (String participant : participants) {
+                        receiverIndex = findUser(participant);
+
+                        if (receiverIndex != -1) {
+                            Server.users.get(receiverIndex).getConversation(fields[0]).setParticipants(getParticipants(fields[0]));
+                        } else {
+                            holdCommand(direction + ' ' + command, participant);
+                        }
+                    }
+
+                    //Delete group chat for user
+                    Server.users.get(senderIndex).deleteConversation(Server.users.get(senderIndex).getConversation(fields[0]));
+                    sendGuiData(senderIndex, out);
+
+                    break;
+
+
+                case "hc":
+                    //Hide conversation: dc <chat> <username>
                     //Hide conversation, set openChat to most recent
 
-                    fields = command.split(" ");
+                    //Fix formatting for group chat
+                    if (command.contains("  ")) {
+                        index = command.indexOf("  ");
+                        fields = new String[2];
+                        fields[0] = command.substring(0, index + 1);
+                        fields[1] = command.substring(index + 2);
+
+                    } else {
+                        fields = command.split(" ");
+                    }
+
+                    if (!userCheck(fields[1])) return;
                     senderIndex = findUser(fields[1]);
                     Server.users.get(senderIndex).getConversation(fields[0]).setHidden(true);
 
@@ -283,6 +585,7 @@ public class ClientHandler implements Runnable {
                     //Close user: cu <username>
                     //Rewrite all User data to file, delete User from users
 
+                    if (!userCheck(command)) return;
                     senderIndex = findUser(command);
 
                     closeUser(Server.users.get(senderIndex));
@@ -291,11 +594,78 @@ public class ClientHandler implements Runnable {
 
                     break;
 
+                case "du":
+                    //Delete user: du <username> <password>
+                    //Delete user from logins, file system and all group chats
+
+                    fields = command.split(" ");
+                    senderIndex = findUser(fields[0]);
+                    if (!userCheck(fields[0])) return;
+
+                    //Remove from group chats
+                    for (Conversation conversation : Server.users.get(senderIndex).getConversations()) {
+                        chatName = conversation.getChat();
+
+                        if (chatName.charAt(chatName.length() - 1) == ' ') {
+
+                            groupInfo = "";
+                            newGroupInfo = "";
+
+                            //Create list and string of participants
+                            participants = getParticipants(chatName);
+
+                            for (String participant : participants) {
+                                groupInfo = groupInfo + ' ' + participant;
+                                if (!participant.equals(fields[0])) {
+                                    newGroupInfo = newGroupInfo + ' ' + participant;
+                                }
+                            }
+
+                            //Update server file structure
+                            Server.groups.remove(chatName + groupInfo);
+                            Server.groups.add(chatName + newGroupInfo);
+                            updateGroups();
+
+                            //Remove user from participants for each participant
+                            for (String participant : participants) {
+                                receiverIndex = findUser(participant);
+
+                                if (receiverIndex != -1) {
+                                    Server.users.get(receiverIndex).getConversation(chatName).setParticipants(getParticipants(chatName));
+                                } else {
+                                    holdCommand("lg " + chatName + ' ' + fields[0], participant);
+                                }
+                            }
+
+                            //Delete group chat for user
+                            Server.users.get(senderIndex).deleteConversation(Server.users.get(senderIndex).getConversation(chatName));
+                        }
+                    }
+
+                    //Remove from logins
+                    Server.logins.remove(command);
+                    updateLogins();
+                    sendConfirmation("Account deleted.", out);
+
+                    //Delete user folder and content
+                    File userFolder = new File("src/Server/" + fields[0]);
+                    String[] userFiles = userFolder.list();
+                    for (String s : userFiles) {
+                        File currentFile = new File(userFolder.getPath(), s);
+                        currentFile.delete();
+                    }
+                    userFolder.delete();
+
+                    //Remove from server and end connection
+                    Server.users.remove(findUser(fields[0]));
+                    sendConfirmation("Goodbye.", out);
+
                 case "eu":
                     //Edit user: eu <username> <password> <newPassword>
                     //Change the user's password to the new password
 
                     fields = command.split(" ");
+                    if (!userCheck(fields[0])) return;
 
                     //Check that user login is correct
                     if (!Server.logins.contains(fields[0] + ' ' + fields[1])) {
@@ -312,10 +682,31 @@ public class ClientHandler implements Runnable {
 
                     break;
 
-
                 case "xc":
-                    //Export conversation: <chat> <username> <filename>
+                    //Export conversation: <chat> <username>
                     //Export all Conversation data to file
+
+                    if (command.contains("  ")) {
+                        index = command.indexOf("  ");
+                        fields = new String[2];
+                        fields[0] = command.substring(0, index + 1);
+                        fields[1] = command.substring(index + 2);
+
+                    } else {
+                        fields = command.split(" ");
+                    }
+
+                    if (!userCheck(fields[1])) return;
+                    senderIndex = findUser(fields[1]);
+
+                    ArrayList<Message> messages = Server.users.get(senderIndex).getConversation(fields[0]).getMessages();
+                    String messageString = "";
+
+                    for (Message messageObj : messages) {
+                        messageString = messageString + messageObj.toString();
+                    }
+
+                    sendCommand("xc " + fields[0] + ' ' + messageString, out);
 
                     break;
             }
@@ -374,9 +765,24 @@ public class ClientHandler implements Runnable {
             try (FileOutputStream fos = new FileOutputStream(userFile, false);
                  PrintWriter pw = new PrintWriter(fos)) {
 
+                //Write lastModified, hidden, and participants
                 pw.println(conversation.getLastModified());
                 pw.println(conversation.isHidden());
 
+                String[] participants = conversation.getParticipants();
+
+                if (participants == null) {
+                    pw.println("null");
+                } else {
+                    String participantLine = "";
+
+                    for (String participant : participants) {
+                        participantLine = participantLine + ' ' + participant;
+                    }
+                    pw.println(participantLine.substring(1));
+                }
+
+                //Write message strings
                 ArrayList<Message> messages = conversation.getMessages();
 
                 for (Message message : messages) {
@@ -446,12 +852,20 @@ public class ClientHandler implements Runnable {
                     boolean hidden = Boolean.parseBoolean(line);
 
                     line = bfr.readLine();
+                    String[] participants;
+                    if (line.equals("null")) {
+                        participants = null;
+                    } else {
+                        participants = line.split(" ");
+                    }
+
+                    line = bfr.readLine();
                     while (line != null) {
                         messages.add(new Message(line));
                         line = bfr.readLine();
                     }
 
-                    user.addConversation(new Conversation(chat, lastModified, hidden, messages));
+                    user.addConversation(new Conversation(chat, participants, lastModified, hidden, messages));
 
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -467,6 +881,48 @@ public class ClientHandler implements Runnable {
         }
 
         return user;
+    }
+
+    public static String[] getParticipants(String chat) {
+        String[] participants = null;
+
+        for (String group : Server.groups) {
+            if (group.startsWith(chat)) {
+                participants = group.substring(chat.length() + 1).split(" ");
+            }
+        }
+        return participants;
+    }
+
+    /**
+     * Replace the groups file with current groups ArrayList
+     */
+    public static void updateGroups() {
+        try (FileOutputStream fos = new FileOutputStream("src/Server/groups.txt", false);
+             PrintWriter pw = new PrintWriter(fos)) {
+            for (String group : Server.groups) {
+                pw.println(group);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Adds login information to ArrayList of logins (from main)
+     *
+     * @param groupData <chat> <username1> <username2>... of group
+     */
+    public static void addGroup(String groupData) {
+        try (FileOutputStream fos = new FileOutputStream("src/Server/groups.txt", true);
+             PrintWriter pw = new PrintWriter(fos)) {
+
+            pw.println(groupData);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -513,6 +969,24 @@ public class ClientHandler implements Runnable {
 
         return Server.clients.get(index).getOut();
 
+    }
+
+    /**
+     * Determines if username exists in logins
+     *
+     * @param username Username of user
+     * @return If user exists
+     */
+    public static boolean doesUserExist(String username) {
+        for (String login : Server.logins) {
+            String user = login.split(" ")[0];
+
+            if (user.equals(username)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

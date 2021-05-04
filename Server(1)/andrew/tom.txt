@@ -1,0 +1,10 @@
+<<<<<<< Updated upstream
+1619832479308
+false
+Message<sender=andrew, receiver=tom, timeStamp=yyyy/MM/dd HH:mm:ss, content=yo>
+=======
+1619832479308
+Message<sender=andrew, receiver=tom, timeStamp=yyyy/MM/dd HH:mm:ss, content=yo>
+Message<sender=andrew, receiver=tom, timeStamp=yyyy/MM/dd HH:mm:ss, content=what's up>
+Message<sender=bob, receiver=tom, timeStamp=yyyy/MM/dd HH:mm:ss, content=what's up>
+>>>>>>> Stashed changes

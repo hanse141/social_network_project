@@ -1,0 +1,5 @@
+1620160404103
+false
+null
+Message<sender=andrew, receiver=tom, timeStamp=05/03 07:16 PM, content=Hi.>
+Message<sender=tom, receiver=andrew, timeStamp=05/04 04:33 PM, content=d>

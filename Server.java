@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 
 public class Server {
     protected static final ArrayList<String> logins = importLogins(); //Login data of all users
+    protected static final ArrayList<String> groups = importGroups(); //All group chats data
     protected static final ArrayList<User> users = new ArrayList<>(); //User objects of online users
     protected static final ArrayList<ClientHandler> clients = new ArrayList<>(); //ClientHandler objects of online users
     private static final ExecutorService pool = Executors.newFixedThreadPool(4); //Pool of threads
@@ -35,6 +36,30 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Imports all group chat data to ArrayList of groups
+     */
+    public static ArrayList<String> importGroups() {
+        ArrayList<String> groups = new ArrayList<>();
+
+        try (FileReader fr = new FileReader("src/Server/groups.txt");
+             BufferedReader bfr = new BufferedReader(fr)) {
+
+            String line = bfr.readLine();
+            while (line != null) {
+                groups.add(line);
+                line = bfr.readLine();
+            }
+
+            return groups;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return groups;
     }
 
     /**

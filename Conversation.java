@@ -10,9 +10,11 @@ import java.util.Date;
 
 public class Conversation implements Comparable<Conversation> {
     private final String chat; //Name of chat (receiver or group)
+    private String[] participants; //List of usernames of participants (null if not group chat)
     private long lastModified; //Time in milliseconds since epoch of last modification
     private boolean hidden; //If the user has deleted the conversation
-    private final ArrayList<Message> messages; //ArrayList of messages
+    private ArrayList<Message> messages; //ArrayList of messages
+
 
     /**
      * Constructs a newly allocated Conversation object and instantiates its chat to the parameter
@@ -21,6 +23,38 @@ public class Conversation implements Comparable<Conversation> {
      */
     public Conversation(String chat) {
         this.chat = chat;
+        this.participants = null;
+        this.lastModified = new Date().getTime();
+        this.hidden = false;
+        this.messages = new ArrayList<Message>();
+    }
+
+    /**
+     * Constructs a newly allocated Conversation object and instantiates its fields to the specified parameters
+     *
+     * @param conversation Conversation object to copy
+     */
+    public Conversation(Conversation conversation) {
+        this.chat = conversation.getChat();
+        this.participants = conversation.getParticipants();
+        this.lastModified = conversation.getLastModified();
+        this.hidden = conversation.isHidden();
+        this.messages = (ArrayList<Message>) conversation.getMessages().clone();
+    }
+
+    /**
+     * Constructs a newly allocated Conversation object and instantiates its chat to the parameter
+     *
+     * @param chat         Name of chat
+     * @param participants List of usernames of participants
+     */
+    public Conversation(String chat, String[] participants) {
+        if (chat.charAt(chat.length() - 1) == ' ') {
+            this.chat = chat;
+        } else {
+            this.chat = chat + ' ';
+        }
+        this.participants = participants;
         this.lastModified = new Date().getTime();
         this.hidden = false;
         this.messages = new ArrayList<Message>();
@@ -30,12 +64,14 @@ public class Conversation implements Comparable<Conversation> {
      * Constructs a newly allocated Conversation object and instantiates its fields to the specified parameters
      *
      * @param chat         Name of chat
+     * @param participants List of usernames of participants
      * @param lastModified Time in milliseconds since epoch of last modification
      * @param hidden       If the user has deleted the conversation
      * @param messages     ArrayList of messages
      */
-    public Conversation(String chat, long lastModified, boolean hidden, ArrayList<Message> messages) {
+    public Conversation(String chat, String[] participants, long lastModified, boolean hidden, ArrayList<Message> messages) {
         this.chat = chat;
+        this.participants = participants;
         this.lastModified = lastModified;
         this.hidden = hidden;
         this.messages = messages;
@@ -48,6 +84,15 @@ public class Conversation implements Comparable<Conversation> {
      */
     public String getChat() {
         return chat;
+    }
+
+    /**
+     * Returns the participants of this Conversation
+     *
+     * @return List of usernames of participants
+     */
+    public String[] getParticipants() {
+        return participants;
     }
 
     /**
@@ -93,6 +138,19 @@ public class Conversation implements Comparable<Conversation> {
         return messages;
     }
 
+    public void setParticipants(String[] participants) {
+        this.participants = participants.clone();
+    }
+
+    /**
+     * Sets the messages of this Conversation
+     *
+     * @param messages Arraylist of messages
+     */
+    public void setMessages(ArrayList<Message> messages) {
+        this.messages = (ArrayList<Message>) messages.clone();
+    }
+
     /**
      * Adds a Message to messages
      *
@@ -124,6 +182,46 @@ public class Conversation implements Comparable<Conversation> {
     public void deleteMessage(Message message) {
         messages.remove(message);
         setLastModified();
+    }
+
+    public boolean addParticipant(String username) {
+        String[] newParticipants = new String[participants.length + 1];
+        int i;
+
+        for (i = 0; i < participants.length; i++) {
+            if (participants[i] == username) {
+                return false;
+            }
+            newParticipants[i] = participants[i];
+        }
+
+        newParticipants[i] = username;
+
+        this.setParticipants(newParticipants);
+        return true;
+    }
+
+    public boolean removeParticipant(String username) {
+        String[] newParticipants = new String[participants.length - 1];
+        boolean isUserInGroup = true;
+
+        for (int i = 0; i < participants.length - 1; i++) {
+            if (!participants[i].equals(username)) {
+                if (!isUserInGroup) {
+                    newParticipants[i - 1] = participants[i];
+                } else {
+                    newParticipants[i] = participants[i];
+                }
+            } else {
+                isUserInGroup = false;
+            }
+        }
+
+        if (!isUserInGroup) {
+            this.setParticipants(newParticipants);
+        }
+
+        return isUserInGroup;
     }
 
     /**
@@ -162,17 +260,34 @@ public class Conversation implements Comparable<Conversation> {
     }
 
     /**
-     * Exports this Conversation to the specified filename
+     * Exports a Conversation to the specified filename
      *
+     * @param messageCommand String containing conversation info as <chat> Message<>Message<>...
      * @param filename Name of file
      */
-    public void export(String filename) {
+    public static void export(String messageCommand, String filename) {
+        String chatName;
+        String messageString;
+
+        if (messageCommand.contains("  ")) {
+            int index = messageCommand.indexOf("  ");
+            chatName = messageCommand.substring(0, index + 1);
+            messageString = messageCommand.substring(index + 2);
+
+        } else {
+            chatName = messageCommand.split(" ")[0];
+            messageString = messageCommand.split(" ")[1];
+        }
+
+        String[] messageStrings = messageString.split("(?=Message<sender=)");
+
         try (FileOutputStream fos = new FileOutputStream(filename, false);
              PrintWriter pw = new PrintWriter(fos)) {
 
-            pw.println(chat);
+            pw.println(chatName);
 
-            for (Message message : messages) {
+            for (String messageAsString : messageStrings) {
+                Message message = new Message(messageAsString);
                 pw.println(message.getTimeStamp() + ' ' + message.getSender() + ": " + message.getContent());
             }
 

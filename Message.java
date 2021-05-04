@@ -37,10 +37,10 @@ public class Message {
         int timeStampIndex = message.indexOf("timeStamp=");
         int contentIndex = message.indexOf("content=");
 
-        this.sender = message.substring(senderIndex + 7, receiverIndex - 2);
-        this.receiver = message.substring(receiverIndex + 9, timeStampIndex - 2);
-        this.timeStamp = message.substring(timeStampIndex + 10, contentIndex - 2);
-        this.content = message.substring(contentIndex + 8, message.length() - 1);
+        sender = message.substring(senderIndex + 7, receiverIndex - 2);
+        receiver = message.substring(receiverIndex + 9, timeStampIndex - 2);
+        timeStamp = message.substring(timeStampIndex + 10, contentIndex - 2);
+        content = message.substring(contentIndex + 8, message.length() - 1);
     }
 
     /**

@@ -1,3 +1,0 @@
-1619832479308
-Message<sender=andrew, receiver=tom, timeStamp=yyyy/MM/dd HH:mm:ss, content=yo>
-Message<sender=andrew, receiver=tom, timeStamp=yyyy/MM/dd HH:mm:ss, content=what's up>

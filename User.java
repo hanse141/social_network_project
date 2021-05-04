@@ -85,6 +85,9 @@ public class User {
      */
     public void addConversation(Conversation conversation) {
         conversations.add(conversation);
+        if (conversations.size() == 1) {
+            this.openChat = conversation.getChat();
+        }
     }
 
     /**
@@ -94,6 +97,9 @@ public class User {
      */
     public void deleteConversation(Conversation conversation) {
         conversations.remove(conversation);
+        if (conversations.size() == 0) {
+            this.openChat = null;
+        }
     }
 
     /**
@@ -153,11 +159,15 @@ public class User {
     }
 
     /**
-     * @param commands
+     * Process the commands sent to a user while they were offline
+     *
+     * @param commands ArrayList of commands to process
      */
     public void processHolds(ArrayList<String> commands) {
         String[] fields;
         Message message;
+        String chatName;
+        Conversation conversation;
 
         for (String command : commands) {
 
@@ -168,24 +178,93 @@ public class User {
 
                 case "nm":
                     message = new Message(command);
-                    this.getConversation(message.getSender()).addMessage(message);
+                    if (message.getReceiver().contains(" ")) { //Group chat
+                        this.getConversation(message.getReceiver()).addMessage(message);
+                    } else {
+                        this.getConversation(message.getSender()).addMessage(message);
+                    }
                     break;
 
                 case "em":
                     int index = command.indexOf("Message<sender=");
                     String content = command.substring(0, index - 1);
                     message = new Message(command.substring(index));
-                    this.getConversation(message.getSender()).editMessage(message, content);
+                    if (message.getReceiver().contains(" ")) { //Group chat
+                        this.getConversation(message.getReceiver()).editMessage(message, content);
+                    } else {
+                        this.getConversation(message.getSender()).editMessage(message, content);
+                    }
                     break;
 
                 case "dm":
                     message = new Message(command);
-                    this.getConversation(message.getSender()).deleteMessage(message);
+                    if (message.getReceiver().contains(" ")) { //Group chat
+                        this.getConversation(message.getReceiver()).deleteMessage(message);
+                    } else {
+                        this.getConversation(message.getSender()).deleteMessage(message);
+                    }
                     break;
 
                 case "nc":
                     fields = command.split(" ");
                     this.addConversation(new Conversation(fields[1]));
+                    break;
+
+                case "ng":
+                    index = command.indexOf("  ");
+                    chatName = command.substring(0, index);
+                    fields = command.substring(index + 2).split(" ");
+
+                    conversation = new Conversation(chatName, new String[0]);
+                    for (String participant : fields) {
+
+                        if (ClientHandler.doesUserExist(participant)) {
+                            conversation.addParticipant(participant);
+                        }
+                    }
+                    this.addConversation(new Conversation(conversation.getChat(), conversation.getParticipants()));
+                    break;
+
+                case "ag":
+                    index = command.indexOf("  ");
+                    chatName = command.substring(0, index + 1);
+                    int messageIndex = command.indexOf("Message<sender=");
+                    String[] participants = null;
+                    fields = command.substring(index + 2).split(" ");
+
+                    //If this is user being added
+                    if (this.getUsername().equals(fields[0])) {
+
+                        for (int i = 0; i < Server.groups.size(); i++) {
+                            if (Server.groups.get(i).startsWith(chatName)) {
+                                participants = Server.groups.get(i).substring(index + 2).split(" ");
+                            }
+                        }
+
+                        conversation = new Conversation(chatName, participants);
+                        ArrayList<Message> messages = new ArrayList<Message>();
+
+                        if (messageIndex > 0) {
+                            String[] messageStrings = command.substring(messageIndex).split("(?=Message<sender=)");
+                            for (String messageString : messageStrings) {
+                                messages.add(new Message(messageString));
+                            }
+                            conversation.setMessages(messages);
+                        }
+
+                        this.addConversation(conversation);
+
+                    } else { //If this is participant updating participants
+                        this.getConversation(chatName).addParticipant(fields[0]);
+                    }
+                    break;
+
+                case "lg":
+                    index = command.indexOf("  ");
+                    fields = new String[2];
+                    fields[0] = command.substring(0, index + 1);
+                    fields[1] = command.substring(index + 2);
+                    this.getConversation(fields[0]).setParticipants(ClientHandler.getParticipants(fields[0]));
                     break;
             }
         }

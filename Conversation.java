@@ -184,6 +184,12 @@ public class Conversation implements Comparable<Conversation> {
         setLastModified();
     }
 
+    /**
+     * Adds a participant to this conversation
+     *
+     * @param username Username of user
+     * @return If participant was added successfully, false indicates user is already added
+     */
     public boolean addParticipant(String username) {
         String[] newParticipants = new String[participants.length + 1];
         int i;
@@ -199,29 +205,6 @@ public class Conversation implements Comparable<Conversation> {
 
         this.setParticipants(newParticipants);
         return true;
-    }
-
-    public boolean removeParticipant(String username) {
-        String[] newParticipants = new String[participants.length - 1];
-        boolean isUserInGroup = true;
-
-        for (int i = 0; i < participants.length - 1; i++) {
-            if (!participants[i].equals(username)) {
-                if (!isUserInGroup) {
-                    newParticipants[i - 1] = participants[i];
-                } else {
-                    newParticipants[i] = participants[i];
-                }
-            } else {
-                isUserInGroup = false;
-            }
-        }
-
-        if (!isUserInGroup) {
-            this.setParticipants(newParticipants);
-        }
-
-        return isUserInGroup;
     }
 
     /**
@@ -263,7 +246,7 @@ public class Conversation implements Comparable<Conversation> {
      * Exports a Conversation to the specified filename
      *
      * @param messageCommand String containing conversation info as <chat> Message<>Message<>...
-     * @param filename Name of file
+     * @param filename       Name of file
      */
     public static void export(String messageCommand, String filename) {
         String chatName;
@@ -276,7 +259,7 @@ public class Conversation implements Comparable<Conversation> {
 
         } else {
             chatName = messageCommand.split(" ")[0];
-            messageString = messageCommand.split(" ")[1];
+            messageString = messageCommand.substring(chatName.length() + 1);
         }
 
         String[] messageStrings = messageString.split("(?=Message<sender=)");
@@ -288,7 +271,7 @@ public class Conversation implements Comparable<Conversation> {
 
             for (String messageAsString : messageStrings) {
                 Message message = new Message(messageAsString);
-                pw.println(message.getTimeStamp() + ' ' + message.getSender() + ": " + message.getContent());
+                pw.println(message.getTimeStamp() + ' ' + message.getSender() + ": " + message.getContent() + ',');
             }
 
         } catch (IOException e) {

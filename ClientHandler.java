@@ -25,7 +25,7 @@ import java.util.Arrays;
  * <p>
  * Message.toString() ->   Message<sender=s, receiver=r, timeStamp=MM/dd hh:mm aa, content=c>
  * Note: each command must be completely correct in every character or it will send an error
- * Note: group chat names have a ' ' character appended to them and can contain spaces
+ * Note: group chat names have a ' ' character appended to them and can contain single spaces
  */
 
 public class ClientHandler implements Runnable {
@@ -110,6 +110,7 @@ public class ClientHandler implements Runnable {
 
         while (!direction.equals("cu")) {
 
+            //Read command sent from Client
             try {
                 command = in.readLine();
             } catch (IOException e) {
@@ -121,7 +122,7 @@ public class ClientHandler implements Runnable {
             direction = command.substring(0, 2);
             command = command.substring(3);
 
-
+            //Process command
             switch (direction) {
 
                 case "nm":
@@ -134,14 +135,16 @@ public class ClientHandler implements Runnable {
 
                     if (message.getReceiver().contains(" ")) { //Group chat
 
-                        fields = Server.users.get(senderIndex).getConversation(message.getReceiver()).getParticipants();
+                        fields = Server.users.get(senderIndex).getConversation(
+                                message.getReceiver()).getParticipants();
 
                         //Add chat to each user that exists
                         for (String participant : fields) {
                             receiverIndex = findUser(participant);
 
                             if (receiverIndex != -1) {
-                                Server.users.get(receiverIndex).getConversation(message.getReceiver()).addMessage(message);
+                                Server.users.get(receiverIndex).getConversation(
+                                        message.getReceiver()).addMessage(message);
                                 sendGuiData(receiverIndex, findWriter(participant));
 
                             } else {
@@ -159,7 +162,8 @@ public class ClientHandler implements Runnable {
                             sendGuiData(senderIndex, out);
 
                             if (receiverIndex != -1) {
-                                Server.users.get(receiverIndex).getConversation(message.getSender()).addMessage(message);
+                                Server.users.get(receiverIndex).getConversation(
+                                        message.getSender()).addMessage(message);
                                 sendGuiData(receiverIndex, findWriter(message.getReceiver()));
 
                             } else {
@@ -194,7 +198,8 @@ public class ClientHandler implements Runnable {
                             }
                         }
 
-                        Server.users.get(findUser(message.getSender())).getConversation(message.getReceiver()).editMessage(message, content);
+                        Server.users.get(findUser(message.getSender())).getConversation(
+                                message.getReceiver()).editMessage(message, content);
                         sendGuiData(senderIndex, out);
 
                         //Add chat to each user that exists
@@ -202,7 +207,8 @@ public class ClientHandler implements Runnable {
                             receiverIndex = findUser(participant);
 
                             if (receiverIndex != -1) {
-                                Server.users.get(receiverIndex).getConversation(message.getReceiver()).editMessage(message, content);
+                                Server.users.get(receiverIndex).getConversation(
+                                        message.getReceiver()).editMessage(message, content);
                                 sendGuiData(receiverIndex, findWriter(participant));
 
                             } else {
@@ -215,14 +221,15 @@ public class ClientHandler implements Runnable {
                         if (doesUserExist(message.getReceiver())) {
                             receiverIndex = findUser(message.getReceiver());
 
-                            Server.users.get(senderIndex).getConversation(message.getReceiver()).editMessage(message, content);
+                            Server.users.get(senderIndex).getConversation(
+                                    message.getReceiver()).editMessage(message, content);
                             sendGuiData(senderIndex, out);
 
                             if (receiverIndex != -1) {
                                 try {
-                                    Server.users.get(receiverIndex).getConversation(message.getSender()).editMessage(message, content);
+                                    Server.users.get(receiverIndex).getConversation(
+                                            message.getSender()).editMessage(message, content);
                                 } catch (ArrayIndexOutOfBoundsException ignored) {
-                                    sendGuiData(receiverIndex, findWriter(message.getReceiver()));
                                 } //Happens when shared conversation has same pointer in multiple users
                                 sendGuiData(receiverIndex, findWriter(message.getReceiver()));
 
@@ -254,7 +261,8 @@ public class ClientHandler implements Runnable {
                             receiverIndex = findUser(participant);
 
                             if (receiverIndex != -1) {
-                                Server.users.get(receiverIndex).getConversation(message.getReceiver()).deleteMessage(message);
+                                Server.users.get(receiverIndex).getConversation(
+                                        message.getReceiver()).deleteMessage(message);
                                 sendGuiData(receiverIndex, findWriter(participant));
 
                             } else {
@@ -270,7 +278,8 @@ public class ClientHandler implements Runnable {
                             sendGuiData(senderIndex, out);
 
                             if (receiverIndex != -1) {
-                                Server.users.get(receiverIndex).getConversation(message.getSender()).deleteMessage(message);
+                                Server.users.get(receiverIndex).getConversation(
+                                        message.getSender()).deleteMessage(message);
                                 sendGuiData(receiverIndex, findWriter(message.getReceiver()));
                             } else {
                                 holdCommand(direction + ' ' + command, message.getReceiver());
@@ -315,9 +324,10 @@ public class ClientHandler implements Runnable {
 
                     //Check if user exists or chat is hidden
                     if (!doesUserExist(fields[0])) {
-                        sendError("Error: User does not exist.", out);
+                        sendError("Error: User " + fields[0] + "does not exist.", out);
 
-                    } else if (Server.users.get(senderIndex).getConversations().contains(Server.users.get(senderIndex).getConversation(fields[0]))) {
+                    } else if (Server.users.get(senderIndex).getConversations().contains(
+                            Server.users.get(senderIndex).getConversation(fields[0]))) {
 
                         if (Server.users.get(senderIndex).getConversation(fields[0]).isHidden()) {
                             Server.users.get(senderIndex).getConversation(fields[0]).setHidden(false);
@@ -336,7 +346,6 @@ public class ClientHandler implements Runnable {
                         if (receiverIndex != -1) {
 
                             Server.users.get(receiverIndex).addConversation(new Conversation(fields[1]));
-                            sendGuiData(receiverIndex, findWriter(fields[0]));
                             sendGuiData(receiverIndex, findWriter(fields[0]));
 
                         } else {
@@ -359,7 +368,8 @@ public class ClientHandler implements Runnable {
 
                     //Check if chat already exists
                     senderIndex = findUser(fields[0]);
-                    if (Server.users.get(senderIndex).getConversations().contains(Server.users.get(senderIndex).getConversation(chatName))) {
+                    if (Server.users.get(senderIndex).getConversations().contains(
+                            Server.users.get(senderIndex).getConversation(chatName))) {
                         sendError("Error: Chat already exists.", out);
                     } else {
 
@@ -381,8 +391,10 @@ public class ClientHandler implements Runnable {
 
                             if (receiverIndex != -1) {
 
-                                Server.users.get(receiverIndex).addConversation(new Conversation(conversation.getChat(), conversation.getParticipants()));
-                                Server.users.get(receiverIndex).setOpenChat(Server.users.get(receiverIndex).getChats()[0]);
+                                Server.users.get(receiverIndex).addConversation(
+                                        new Conversation(conversation.getChat(), conversation.getParticipants()));
+                                Server.users.get(receiverIndex).setOpenChat(
+                                        Server.users.get(receiverIndex).getChats()[0]);
                                 sendConfirmation("Chat created.", findWriter(participant));
                                 sendGuiData(receiverIndex, findWriter(participant));
 
@@ -415,7 +427,8 @@ public class ClientHandler implements Runnable {
                     } else {
 
                         //Add new user to participants for each participant
-                        participants = Server.users.get(senderIndex).getConversation(chatName).getParticipants().clone();
+                        participants = Server.users.get(senderIndex).getConversation(
+                                chatName).getParticipants().clone();
                         groupInfo = ' ' + participants[0];
 
                         if (Server.users.get(senderIndex).getConversation(chatName).addParticipant(fields[0])) {
@@ -438,11 +451,13 @@ public class ClientHandler implements Runnable {
 
                             //Create group chat for new user
                             if (receiverIndex != -1) {
-                                Server.users.get(receiverIndex).addConversation(new Conversation(Server.users.get(senderIndex).getConversation(chatName)));
+                                Server.users.get(receiverIndex).addConversation(
+                                        new Conversation(Server.users.get(senderIndex).getConversation(chatName)));
                                 sendGuiData(receiverIndex, findWriter(fields[0]));
 
                             } else {
-                                ArrayList<Message> messages = Server.users.get(senderIndex).getConversation(chatName).getMessages();
+                                ArrayList<Message> messages = Server.users.get(
+                                        senderIndex).getConversation(chatName).getMessages();
                                 String messagesString = "";
 
                                 for (int i = 0; i < messages.size(); i++) {
@@ -497,14 +512,16 @@ public class ClientHandler implements Runnable {
                         receiverIndex = findUser(participant);
 
                         if (receiverIndex != -1) {
-                            Server.users.get(receiverIndex).getConversation(fields[0]).setParticipants(getParticipants(fields[0]));
+                            Server.users.get(receiverIndex).getConversation(
+                                    fields[0]).setParticipants(getParticipants(fields[0]));
                         } else {
                             holdCommand(direction + ' ' + command, participant);
                         }
                     }
 
                     //Delete group chat for user
-                    Server.users.get(senderIndex).deleteConversation(Server.users.get(senderIndex).getConversation(fields[0]));
+                    Server.users.get(senderIndex).deleteConversation(
+                            Server.users.get(senderIndex).getConversation(fields[0]));
                     sendGuiData(senderIndex, out);
 
                     break;
@@ -631,14 +648,16 @@ public class ClientHandler implements Runnable {
                                 receiverIndex = findUser(participant);
 
                                 if (receiverIndex != -1) {
-                                    Server.users.get(receiverIndex).getConversation(chatName).setParticipants(getParticipants(chatName));
+                                    Server.users.get(receiverIndex).getConversation(
+                                            chatName).setParticipants(getParticipants(chatName));
                                 } else {
                                     holdCommand("lg " + chatName + ' ' + fields[0], participant);
                                 }
                             }
 
                             //Delete group chat for user
-                            Server.users.get(senderIndex).deleteConversation(Server.users.get(senderIndex).getConversation(chatName));
+                            Server.users.get(senderIndex).deleteConversation(
+                                    Server.users.get(senderIndex).getConversation(chatName));
                         }
                     }
 
@@ -699,15 +718,23 @@ public class ClientHandler implements Runnable {
                     if (!userCheck(fields[1])) return;
                     senderIndex = findUser(fields[1]);
 
-                    ArrayList<Message> messages = Server.users.get(senderIndex).getConversation(fields[0]).getMessages();
-                    String messageString = "";
+                    if (Server.users.get(senderIndex).getConversations().contains(
+                            Server.users.get(senderIndex).getConversation(fields[0]))) {
 
-                    for (Message messageObj : messages) {
-                        messageString = messageString + messageObj.toString();
+                        ArrayList<Message> messages = Server.users.get(
+                                senderIndex).getConversation(fields[0]).getMessages();
+                        String messageString = "";
+
+                        for (Message messageObj : messages) {
+                            messageString = messageString + messageObj.toString();
+                        }
+
+                        sendCommand("xc " + fields[0] + ' ' + messageString, out);
+                        sendConfirmation("File created.", out);
+                    } else {
+
+                        sendError("Error: Chat doesn't exist.", out);
                     }
-
-                    sendCommand("xc " + fields[0] + ' ' + messageString, out);
-
                     break;
             }
         }
@@ -883,6 +910,12 @@ public class ClientHandler implements Runnable {
         return user;
     }
 
+    /**
+     * Returns the list of participants currently in Server.groups for a given chat name
+     *
+     * @param chat Name of group chat
+     * @return List of participants of a group chat
+     */
     public static String[] getParticipants(String chat) {
         String[] participants = null;
 
@@ -957,6 +990,12 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    /**
+     * Returns the PrintWriter of a ClientHandler with the given username
+     *
+     * @param username Username of user
+     * @return PrintWriter of other user's ClientHandler
+     */
     public static PrintWriter findWriter(String username) {
         int index = -1;
 
